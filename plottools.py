@@ -4,6 +4,8 @@ from refnx._lib import flatten
 import matplotlib.patches as mpatches
 import corner
 import refnx
+import sys
+sys.path.append("/mnt/1D9D9A242359B87C/Git Repos/refnx/examples/analytical_profiles/brushes/")
 import brush
 
 def unpack_objective(obj):
@@ -14,29 +16,41 @@ def unpack_objective(obj):
     return data, structure, model
 
 
-def plot_logrefl(objective, samples=None, colour = 'k', alpha = 0.05, limits = None):
+def plot_logrefl(objective, axis=None, colour = None, alpha = 1, limits = None):
+    if isinstance(objective, refnx.analysis.objective.GlobalObjective):
+        num_objectives = len(objective.objectives)
+        
+        if colour is None or len(colour) != num_objectives:
+            colour = [colour]*num_objectives
+            
+        if isinstance(alpha, int):
+            alpha = [alpha]*num_objectives
+        elif len(alpha) != num_objectives:
+            print ("Length of alpha does not match number of objectives")
+            return
+        
+        for obj, col, al in zip(objective.objectives, colour, alpha):
+            plot_logrefl(obj, axis=axis, colour = col, alpha = al, limits = limits)
+        return
     
     data, structure, model = unpack_objective(objective)
-
-    if np.all(samples) != None:
-        if type(colour) != list:
-            colour = [colour]*len(samples)
-            
-        for i, c in zip(samples, colour):
-            objective.setp(i)
-            plt.plot(data.x, model(data.x, x_err=data.x_err), color=c, alpha = alpha)
-    else:
-        plt.plot(data.x, model(data.x, x_err=data.x_err), color=colour, alpha = alpha)
-            
-    plt.errorbar(data.x, data.y, yerr=data.y_err, marker='.', color='k')
-    plt.xlabel('Q')
-    plt.title("Log Reflectivity")
-    plt.ylabel('logR')
-    plt.yscale('log')
     
+    if axis == None:
+        plt.plot(data.x, model(data.x, x_err=data.x_err), color=colour, alpha = alpha)
+        plt.errorbar(data.x, data.y, yerr=data.y_err, marker='.', color='k')
+        plt.xlabel('Q')
+        plt.title("Log Reflectivity")
+        plt.ylabel('logR')
+        plt.yscale('log')
+    else:
+        axis.plot(data.x, model(data.x, x_err=data.x_err), color=colour)
+
+
     if limits != None:
-        plt.xlim(limits[0:2])
-        plt.ylim(limits[2:])
+        axis.xlim(limits[0:2])
+        axis.ylim(limits[2:])
+        
+    return
     
 def plot_rq4refl(objective, samples=None, colour = 'k', alpha = 0.05, limits = None):
     
@@ -60,48 +74,34 @@ def plot_rq4refl(objective, samples=None, colour = 'k', alpha = 0.05, limits = N
         plt.ylim(limits[2:])
         
 
-def plot_SLD(objective, samples=None, colour = 'k', alpha = 0.05):
-    
-    data, structure, model = unpack_objective(objective)
-    print('hi')
-    if np.all(samples) != None:
-        if type(colour) != list:
-            colour = [colour]*len(samples)
-        for i, c in zip(samples, colour):
-            print (c)
-            objective.setp(i)
-            plt.plot(*structure.sld_profile(), color=c, alpha = alpha)
-    else:
-        plt.plot(*structure.sld_profile(), color=colour, alpha = alpha)
-
-    plt.title("SLD Profile")
-    plt.xlabel('z (Angstrom)')
-    plt.ylabel('SLD')
-    
-
-def fit(objective, full_output=False, method='differential_evolution'):
-    data, structure, model = unpack_objective(objective)
-    print('Before fit:')
-    print("Chi Squared:" , objective.chisqr())
-    plot(data, structure, model)
-    
-    if full_output:
-        print(objective)
-    
-    print("Fitting...")
-    fitter = CurveFitter(objective, threads=4, nwalkers=100)
-    
-    try:
-        fitter.fit(method)
-    except np.linalg.linalg.LinAlgError:
-        print("Errored Out. Finished!")
+def plot_SLD(objective, axis=None, colour = 'k', alpha = 1):
+    if isinstance(objective, refnx.analysis.objective.GlobalObjective):
+        num_objectives = len(objective.objectives)
         
-    print("After fit:")
-    print("Chi Squared:" , objective.chisqr())
-    plot(data, structure, model)
+        if colour is None or len(colour) != num_objectives:
+            colour = [colour]*num_objectives
+            
+        if isinstance(alpha, int):
+            alpha = [alpha]*num_objectives
+        elif len(alpha) != num_objectives:
+            print ("Length of alpha does not match number of objectives")
+            return
+        
+        for obj, col, al in zip(objective.objectives, colour, alpha):
+            plot_SLD(obj, axis=axis, colour = col, alpha = al)
+        return
     
-    if full_output:
-        print(objective)
+    
+    data, structure, model = unpack_objective(objective)
+    
+    if axis == None:
+        plt.plot(*structure.sld_profile(), color=colour, alpha = alpha)
+        plt.title("SLD Profile")
+        plt.xlabel('z (Angstrom)')
+        plt.ylabel('SLD')
+    else:
+        axis.plot(*structure.sld_profile(), color=colour, alpha = alpha)
+    
 
 
         
@@ -257,12 +257,12 @@ def pltpub_SLD(ax, objectives, colours=[], markers=[], z=None, fontsize=14, titl
         colours = [plt.cm.set2(each) for each in np.linspace(0, 1, len(objectives))]
     
     if np.all(z) == None:
-        z = np.linspace(0,1200, 10000)
+        z = np.linspace(0,1200, 1000)
     
 
     for obj, col, marker in zip (objectives, colours, markers):
         sld = obj.model.structure.sld_profile()
-        ax.plot(sld[0]/10, sld[1], color=col, linestyle=marker)
+        ax.plot(sld[0], sld[1], color=col, linestyle=marker)
 
     
     return ax
@@ -282,7 +282,7 @@ def pltpub_VFP(ax, objectives, colours=[], markers=[], z=None, fontsize=14, titl
         spline = find_FFVFP (obj.model.structure)
         vfp = spline.volume_fraction_profile(z)
         mask = vfp > 0
-        ax.plot(z[mask]/10, vfp[mask], color=col, linestyle=marker)
+        ax.plot(z[mask], vfp[mask], color=col, linestyle=marker)
 
             
 
