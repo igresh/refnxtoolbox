@@ -43,7 +43,7 @@ def plot_logrefl(objective, axis=None, colour = None, alpha = 1, limits = None):
         plt.ylabel('logR')
         plt.yscale('log')
     else:
-        axis.plot(data.x, model(data.x, x_err=data.x_err), color=colour)
+        axis.plot(data.x, model(data.x, x_err=data.x_err), color=colour, alpha=alpha)
 
 
     if limits != None:
