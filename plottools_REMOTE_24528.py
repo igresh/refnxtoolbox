@@ -16,45 +16,7 @@ def unpack_objective(obj):
     return data, structure, model
 
 
-def plot_logrefl(objective, axis=None, colour = None, alpha = 1, limits = None, plot_data = False, plot_labels = False):
-    """
-    Plots the log reflectivity. If function recieves an axis object, will plot
-    on existing axis. Otherwise will plot in a new figure.
-    
-    
-    parameters:
-    -----------
-    objective:  a refnx.analysis.objective object
-    axis:       an matplotlib axis object on which the reflectivity profile will be
-                plotted
-    colour:     colour of the plotted profiles
-    alpha:      alpha of the plotted profiles
-    limits:     an array with format [xlow, xhigh, ylow, yhigh]
-    plot_data:  if true will plot the reflectivity data contained in the objective
-    """
-    
-    plot_refl(objective, axis=axis, colour=colour, alpha=alpha, limits=limits,
-              plot_data=False, plot_labels=False, scale = 1)
-    
-
-     
-def plot_refl(objective, axis=None, colour = None, alpha = 1, limits = None, plot_data = False, scale=1):
-    """
-    Plots the reflectivity. If function recieves an axis object, will plot
-    on existing axis. Otherwise will plot in a new figure.
-    
-    
-    parameters:
-    -----------
-    objective:  a refnx.analysis.objective object
-    axis:       an matplotlib axis object on which the reflectivity profile will be
-                plotted
-    colour:     colour of the plotted profiles
-    alpha:      alpha of the plotted profiles
-    limits:     an array with format [xlow, xhigh, ylow, yhigh]
-    plot_data:  if true will plot the reflectivity data contained in the objective
-    """
-    
+def plot_logrefl(objective, axis=None, colour = None, alpha = 1, limits = None):
     if isinstance(objective, refnx.analysis.objective.GlobalObjective):
         num_objectives = len(objective.objectives)
         
@@ -74,21 +36,22 @@ def plot_refl(objective, axis=None, colour = None, alpha = 1, limits = None, plo
     data, structure, model = unpack_objective(objective)
     
     if axis == None:
-        plt.plot(data.x, model(data.x, x_err=data.x_err)*scale, color=colour, alpha=alpha)
+        plt.plot(data.x, model(data.x, x_err=data.x_err), color=colour, alpha = alpha)
+        plt.errorbar(data.x, data.y, yerr=data.y_err, marker='.', color='k')
+        plt.xlabel('Q')
+        plt.title("Log Reflectivity")
+        plt.ylabel('logR')
         plt.yscale('log')
     else:
-        axis.plot(data.x, model(data.x, x_err=data.x_err)*scale, color=colour, alpha=alpha)
-        axis.yscale('log')
-        
-    if plot_data:
-        plt.errorbar(data.x, data.y*scale, yerr=data.y_err*scale, marker='.', color='k')
+        axis.plot(data.x, model(data.x, x_err=data.x_err), color=colour, alpha=alpha)
 
 
-    if limits is not None:
-        assert len(limits) == 4, "Must supply limits in format [xlow, xhigh, ylow, yhigh]"
+    if limits != None:
         axis.xlim(limits[0:2])
         axis.ylim(limits[2:])
         
+    return
+    
 def plot_rq4refl(objective, samples=None, colour = 'k', alpha = 0.05, limits = None):
     
     data, structure, model = unpack_objective(objective)

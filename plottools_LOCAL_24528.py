@@ -83,7 +83,6 @@ def plot_refl(objective, axis=None, colour = None, alpha = 1, limits = None, plo
     if plot_data:
         plt.errorbar(data.x, data.y*scale, yerr=data.y_err*scale, marker='.', color='k')
 
-
     if limits is not None:
         assert len(limits) == 4, "Must supply limits in format [xlow, xhigh, ylow, yhigh]"
         axis.xlim(limits[0:2])

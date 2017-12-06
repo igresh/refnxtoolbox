@@ -77,12 +77,16 @@ def plot_refl(objective, axis=None, colour = None, alpha = 1, limits = None, plo
         plt.plot(data.x, model(data.x, x_err=data.x_err)*scale, color=colour, alpha=alpha)
         plt.yscale('log')
     else:
+<<<<<<< HEAD
         axis.plot(data.x, model(data.x, x_err=data.x_err)*scale, color=colour, alpha=alpha)
         axis.yscale('log')
         
     if plot_data:
         plt.errorbar(data.x, data.y*scale, yerr=data.y_err*scale, marker='.', color='k')
+=======
+        axis.plot(data.x, model(data.x, x_err=data.x_err), color=colour, alpha=alpha)
 
+>>>>>>> 926e504008c8acec55dbea72a3e87247e0b06bfa
 
     if limits is not None:
         assert len(limits) == 4, "Must supply limits in format [xlow, xhigh, ylow, yhigh]"
