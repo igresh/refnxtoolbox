@@ -33,10 +33,10 @@ class CellWriter(Magics):
 
         filename = line + ".py"
         
-        name_func = "\
-def name():\
-    return '%s'\
-\
+        name_func = "\n\
+def name():\n\
+    return '%s'\n\
+\n\
     "%line
         
         with open(filename, 'w') as fh: # Save the cell + metadata as a .py file
