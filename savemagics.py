@@ -31,16 +31,23 @@ class CellWriter(Magics):
         created = time.strftime("#Created: %H:%M %d-%m-%Y\n")
         user = "#Creator: %s\n"%getpass.getuser()
 
-        filename = line
+        filename = line + ".py"
+        
+        name_func = "\
+def name():\
+    return '%s'\
+\
+    "%line
         
         with open(filename, 'w') as fh: # Save the cell + metadata as a .py file
             fh.write(created)
             fh.write(user)
             fh.write(cell)
+            fh.write(name_func)
             
         
         self.shell.run_cell(cell) # Run the contents of the cell
-
+        self.shell.run_cell(name_func)
 
         print("\n---\n[ Wrote cell contents to '%s' ]" % filename)
 
@@ -57,7 +64,7 @@ import sys\n\
 from refnx.analysis import CurveFitter\n\
 from emcee.utils import MPIPool\n\
 from %s import *\n\
-objective = setup()\n\
+objective = setup('%s.dat')\n\
 with MPIPool() as pool:\n\
     if not pool.is_master():\n\
         pool.wait()\n\
@@ -80,7 +87,7 @@ with MPIPool() as pool:\n\
               'a', buffering=%d) as fh:\n\
 \n\
         fitter_dry.sample(nsteps, nthin=nthin, pool=pool, verbose=True, f=fh)\
-"%(objective_name, nwalkers, ntemps, nsteps, nthin, init_method, objective_name, buffering)
+"%(objective_name, objective_name, nwalkers, ntemps, nsteps, nthin, init_method, objective_name, buffering)
         
     filename = objective_name + "_run.py"
         
