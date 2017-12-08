@@ -16,7 +16,7 @@ def unpack_objective(obj):
     return data, structure, model
 
 
-def plot_logrefl(objective, axis=None, colour=None, alpha=1, limits=None, plot_data=False, plot_labels=False, ymult=1):
+def plot_logrefl(objective, axis=None, colour=None, alpha=1, limits=None, plot_lines=True, plot_data=True, plot_labels=True, ymult=1):
     """
     Plots the log reflectivity. If function recieves an axis object, will plot
     on existing axis. Otherwise will plot in a new figure.
@@ -38,18 +38,18 @@ def plot_logrefl(objective, axis=None, colour=None, alpha=1, limits=None, plot_d
         fig, axis = plt.subplots()
     
     plot_refl(objective, axis=axis, colour=colour, alpha=alpha, limits=limits,
-              plot_data=False, plot_labels=False, scale = 'log', ymult=ymult)
+              plot_data=plot_data, plot_lines=plot_lines, scale = 'log', ymult=ymult)
     
     if plot_labels:
-        axis.set_xlabel('Q')
-        axis.set_ylabel('log$(R)$')
+        axis.set_xlabel(r'$Q$')
+        axis.set_ylabel(r'log$(R)$')
     
     axis.set_yscale('log')
         
     return axis
 
 
-def plot_rq4refl(objective, axis=None, colour=None, alpha=1, limits=None, plot_data=False, plot_labels=False, ymult=1):
+def plot_rq4refl(objective, axis=None, colour=None, alpha=1, limits=None, plot_lines=True, plot_data=True, plot_labels=True, ymult=1):
     """
     Plots the log reflectivity. If function recieves an axis object, will plot
     on existing axis. Otherwise will plot in a new figure.
@@ -71,18 +71,18 @@ def plot_rq4refl(objective, axis=None, colour=None, alpha=1, limits=None, plot_d
         fig, axis = plt.subplots()
 
     plot_refl(objective, axis=axis, colour=colour, alpha=alpha, limits=limits,
-              plot_data=False, plot_labels=False, scale = 'logRQ4', ymult=ymult)
+              plot_data=plot_data, plot_lines=plot_lines,  scale = 'logRQ4', ymult=ymult)
     
     if plot_labels:
-        axis.set_xlabel('Q')
-        axis.set_ylabel('RQ^4')
+        axis.set_xlabel(r'$Q$')
+        axis.set_ylabel(r'log$(RQ^4)$')
         
     axis.set_yscale('log')
         
     return axis
 
     
-def plot_refl(objective, axis, colour = None, alpha = 1, limits = None, plot_data = False, scale='log', ymult=1):
+def plot_refl(objective, axis, colour = None, alpha = 1, limits = None, plot_lines=True, plot_data = False, scale='log', ymult=1):
     """
     Internal function for plotting reflectivity
     """
@@ -110,11 +110,11 @@ def plot_refl(objective, axis, colour = None, alpha = 1, limits = None, plot_dat
     elif scale == 'logRQ4':
         ymod = (data.x**4) * ymult
     
-    axis.plot(data.x, model(data.x, x_err=data.x_err)*ymod, color=colour, alpha=alpha)
-    axis.yscale('log')
+    if plot_lines:
+        axis.plot(data.x, model(data.x, x_err=data.x_err)*ymod, color=colour, alpha=alpha)
         
     if plot_data:
-        plt.errorbar(data.x, data.y*ymod, yerr=data.y_err*ymod, marker='.', color='k')
+        axis.errorbar(data.x, data.y*ymod, yerr=data.y_err*ymod, marker='.', color=colour, alpha=alpha)
 
     if limits is not None:
         assert len(limits) == 4, "Must supply limits in format [xlow, xhigh, ylow, yhigh]"
@@ -124,7 +124,11 @@ def plot_refl(objective, axis, colour = None, alpha = 1, limits = None, plot_dat
 
         
 
-def plot_SLD(objective, axis=None, colour = 'k', alpha = 1):
+def plot_SLD(objective, axis=None, colour = 'k', alpha = 1, plot_labels=False):
+    if plot_labels:
+        axis.set_xlabel(r'z, $\AA$')
+        axis.set_ylabel(r'SLD')
+    
     if isinstance(objective, refnx.analysis.objective.GlobalObjective):
         num_objectives = len(objective.objectives)
         
@@ -144,16 +148,45 @@ def plot_SLD(objective, axis=None, colour = 'k', alpha = 1):
     
     data, structure, model = unpack_objective(objective)
     
-    if axis == None:
-        plt.plot(*structure.sld_profile(), color=colour, alpha = alpha)
-        plt.title("SLD Profile")
-        plt.xlabel('z (Angstrom)')
-        plt.ylabel('SLD')
-    else:
-        axis.plot(*structure.sld_profile(), color=colour, alpha = alpha)
+    if axis is None:
+        fig, axis = plt.subplots()
+
+    axis.plot(*structure.sld_profile(), color=colour, alpha = alpha)
+
+   
+
+def plot_VFP(objective, axis=None, colour = 'k', alpha = 1, plot_labels=False):
     
+    if plot_labels:
+        axis.set_xlabel(r'z, $\AA$')
+        axis.set_ylabel(r'Volume Fraction')
 
-
+    if isinstance(objective, refnx.analysis.objective.GlobalObjective):
+        num_objectives = len(objective.objectives)
+        
+        if colour is None or len(colour) != num_objectives:
+            colour = [colour]*num_objectives
+            
+        if isinstance(alpha, int):
+            alpha = [alpha]*num_objectives
+        elif len(alpha) != num_objectives:
+            print ("Length of alpha does not match number of objectives")
+            return
+        
+        for obj, col, al in zip(objective.objectives, colour, alpha):
+            plot_VFP(obj, axis=axis, colour = col, alpha = al)
+        return
+    
+    
+    data, structure, model = unpack_objective(objective)
+    
+    if axis is None:
+        fig, axis = plt.subplots()
+        
+    spline = find_FFVFP (model.structure)
+    vfp = spline.profile()
+    
+    axis.plot(*vfp, color=colour, alpha = alpha)
         
 def plot_walker_trace(objective, fitter, burn=100):
     chain = fitter.sampler.chain
@@ -190,20 +223,7 @@ def plot_walker_trace(objective, fitter, burn=100):
     
     return plt.gcf()
 
-def plot_profiles(objective, samples=None, colour = 'k', alpha = 0.1):
-    if objective == None:
-        return
-    
-    plt.subplot(2,2,1)
-    plot_SLD(objective, samples, colour = colour, alpha = alpha)
-    plt.subplot(2,2,2)
-    plot_logrefl(objective, samples, colour = colour, alpha = alpha)
-    plt.subplot(2,2,3)
-    plot_rq4refl(objective, samples, colour = colour, alpha = alpha)
-    plt.subplot(2,2,4)
-    plot_logrefl(objective, samples, colour = colour, alpha = alpha, limits=[0,0.05,1e-3,1.1])
-    
-    return plt.gcf()
+
 
 
         
@@ -568,8 +588,6 @@ def max_len(L):
         
 def find_FFVFP (struct):
     for i in struct:
-        if isinstance(i, refnx.reflect.brush.Freeform_dzVFP):
-            return i
-        elif isinstance(i, brush.FreeformVFP):
+        if isinstance(i, brush.FreeformVFP):
             return i
     return None
