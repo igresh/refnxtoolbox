@@ -16,7 +16,7 @@ def unpack_objective(obj):
     return data, structure, model
 
 
-def plot_logrefl(objective, axis=None, colour = None, alpha = 1, limits = None, plot_data = False, plot_labels = False):
+def plot_logrefl(objective, axis=None, colour=None, alpha=1, limits=None, plot_data=False, plot_labels=False, ymult=1):
     """
     Plots the log reflectivity. If function recieves an axis object, will plot
     on existing axis. Otherwise will plot in a new figure.
@@ -31,16 +31,27 @@ def plot_logrefl(objective, axis=None, colour = None, alpha = 1, limits = None, 
     alpha:      alpha of the plotted profiles
     limits:     an array with format [xlow, xhigh, ylow, yhigh]
     plot_data:  if true will plot the reflectivity data contained in the objective
+    plot_labels:Whether or not to plot axis labels
+    ymult:      Constant to multiply the y axis by
     """
+    if axis is None:
+        fig, axis = plt.subplots()
     
     plot_refl(objective, axis=axis, colour=colour, alpha=alpha, limits=limits,
-              plot_data=False, plot_labels=False, scale = 1)
+              plot_data=False, plot_labels=False, scale = 'log', ymult=ymult)
     
+    if plot_labels:
+        axis.set_xlabel('Q')
+        axis.set_ylabel('log$(R)$')
+    
+    axis.set_yscale('log')
+        
+    return axis
 
-     
-def plot_refl(objective, axis=None, colour = None, alpha = 1, limits = None, plot_data = False, scale=1):
+
+def plot_rq4refl(objective, axis=None, colour=None, alpha=1, limits=None, plot_data=False, plot_labels=False, ymult=1):
     """
-    Plots the reflectivity. If function recieves an axis object, will plot
+    Plots the log reflectivity. If function recieves an axis object, will plot
     on existing axis. Otherwise will plot in a new figure.
     
     
@@ -53,8 +64,29 @@ def plot_refl(objective, axis=None, colour = None, alpha = 1, limits = None, plo
     alpha:      alpha of the plotted profiles
     limits:     an array with format [xlow, xhigh, ylow, yhigh]
     plot_data:  if true will plot the reflectivity data contained in the objective
+    plot_labels:Whether or not to plot axis labels
+    ymult:      Constant to multiply the y axis by
     """
+    if axis is None:
+        fig, axis = plt.subplots()
+
+    plot_refl(objective, axis=axis, colour=colour, alpha=alpha, limits=limits,
+              plot_data=False, plot_labels=False, scale = 'logRQ4', ymult=ymult)
     
+    if plot_labels:
+        axis.set_xlabel('Q')
+        axis.set_ylabel('RQ^4')
+        
+    axis.set_yscale('log')
+        
+    return axis
+
+    
+def plot_refl(objective, axis, colour = None, alpha = 1, limits = None, plot_data = False, scale='log', ymult=1):
+    """
+    Internal function for plotting reflectivity
+    """
+
     if isinstance(objective, refnx.analysis.objective.GlobalObjective):
         num_objectives = len(objective.objectives)
         
@@ -72,43 +104,24 @@ def plot_refl(objective, axis=None, colour = None, alpha = 1, limits = None, plo
         return
     
     data, structure, model = unpack_objective(objective)
+
+    if scale == 'log':
+        ymod = 1 * ymult
+    elif scale == 'logRQ4':
+        ymod = (data.x**4) * ymult
     
-    if axis == None:
-        plt.plot(data.x, model(data.x, x_err=data.x_err)*scale, color=colour, alpha=alpha)
-        plt.yscale('log')
-    else:
-        axis.plot(data.x, model(data.x, x_err=data.x_err)*scale, color=colour, alpha=alpha)
-        axis.yscale('log')
+    axis.plot(data.x, model(data.x, x_err=data.x_err)*ymod, color=colour, alpha=alpha)
+    axis.yscale('log')
         
     if plot_data:
-        plt.errorbar(data.x, data.y*scale, yerr=data.y_err*scale, marker='.', color='k')
-
+        plt.errorbar(data.x, data.y*ymod, yerr=data.y_err*ymod, marker='.', color='k')
 
     if limits is not None:
         assert len(limits) == 4, "Must supply limits in format [xlow, xhigh, ylow, yhigh]"
         axis.xlim(limits[0:2])
         axis.ylim(limits[2:])
         
-def plot_rq4refl(objective, samples=None, colour = 'k', alpha = 0.05, limits = None):
-    
-    data, structure, model = unpack_objective(objective)
-    
-    if np.all(samples) != None:
-        for i in samples:
-            objective.setp(i)
-            plt.plot(data.x, model(data.x, x_err=data.x_err)*(data.x**4), color=colour, alpha = alpha)
-    else:
-        plt.plot(data.x, model(data.x, x_err=data.x_err)*(data.x**4), color=colour, alpha = alpha)
 
-    plt.errorbar(data.x, data.y*(data.x**4), yerr=data.y_err*(data.x**4), marker='.', color='k')
-    plt.xlabel('Q')
-    plt.ylabel('RQ^4')
-    plt.yscale('log')
-    plt.title("RQ4 Reflectivity")
-    
-    if limits != None:
-        plt.xlim(limits[0:2])
-        plt.ylim(limits[2:])
         
 
 def plot_SLD(objective, axis=None, colour = 'k', alpha = 1):
