@@ -187,6 +187,7 @@ def plot_VFP(objective, axis=None, colour = 'k', alpha = 1, plot_labels=False):
     vfp = spline.profile()
     
     axis.plot(*vfp, color=colour, alpha = alpha)
+
         
 def plot_walker_trace(objective, fitter, burn=100):
     chain = fitter.sampler.chain
@@ -222,9 +223,6 @@ def plot_walker_trace(objective, fitter, burn=100):
         
     
     return plt.gcf()
-
-
-
 
         
 def plot_corner(objective, samples):
