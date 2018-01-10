@@ -6,6 +6,8 @@ import corner
 import refnx
 import sys
 sys.path.append("/mnt/1D9D9A242359B87C/Git Repos/refnx/examples/analytical_profiles/brushes/")
+sys.path.append("/Users/Isaac/Documents/GitRepos/refnx/examples/analytical_profiles/brushes/")
+
 import brush
 
 def unpack_objective(obj):
@@ -188,41 +190,124 @@ def plot_VFP(objective, axis=None, colour = 'k', alpha = 1, plot_labels=False):
     
     axis.plot(*vfp, color=colour, alpha = alpha)
 
+
+def plot_burnplot (objective, chain, burn=None, number_histograms=15, thin_factor=1):
+    """
+    Constructs plot that enables user to determine if ensemble walkers have
+    reached their equilibrium position.
+    
+    parameters:
+    -----------
+    
+    objective:  a refnx.analysis.objective object
+    
+    chain:      a numpy.ndarray object with shape [#temperatures, #walkers, 
+                #steps, #parameters] or [#walkers, #steps, #parameters]
+    
+    burn:       The number of steps to burn. Does not alter the chain object,
+                but samples that would be kept after the burn are displayed in
+                red. This enables the user to determine if the set burn time
+                is sufficent.
+                
+    number_histograms: number of individual histograms to plot (sample density
+                of histograms)
+    
+    thin_factor: If the samples have already been thinned the thin factor can
+                be supplied so that the step number will be correct.
+                
+    output:
+    -------
+    Returns a figure object
+    """
+    num_subplot_rows = int(chain.shape[3])
+
+    fig, ax = plt.subplots(num_subplot_rows,2)
+    
+    if len(chain.shape) > 3: # Then parallel tempering
+          chain = chain[0]   # Only use lowest temperature
+
+    chain_index = np.linspace(0, chain.shape[2]-1, number_histograms).astype(int)
+    param_index = range(len(objective.varying_parameters()))
+    alphas = (chain_index - chain_index[0])/float(chain_index[-1] - chain_index[0])
+
+    if burn is None:            # If burn is not supplied then
+        burn = chain_index[-1]  # do not plot any as red 
         
-def plot_walker_trace(objective, fitter, burn=100):
-    chain = fitter.sampler.chain
+    for pindex, axis in\
+        zip(param_index, ax):
+        
+        param = objective.varying_parameters()[pindex]
+
+         
+        plot_walker_trace(param, chain[:,:,pindex], axis=axis[0],
+                          thin_factor=thin_factor)
+        
+        axis[0].set_title(param.name + ' - value trace')
+        axis[1].set_title(param.name + ' - PDF')
+        axis[1].set_xlabel('parameter value')
+        axis[1].set_ylabel('probability density')
+
+
+        for cindex, alpha in zip(chain_index, alphas):
+            if cindex < burn:
+                col = 'k'
+            else:
+                col = 'r'
+                
+            axis[1].hist(chain[:,cindex,pindex], bins=12,  normed=True,
+                         histtype='step',alpha=alpha, color=col)
+            mod_cindex = thin_factor*cindex
+            axis[0].plot([mod_cindex,mod_cindex], [param.bounds.lb, param.bounds.ub],
+                         linestyle='dashed', color=col, alpha=alpha)
+            
+    return fig
+
+        
+def plot_walker_trace(parameter, samples, temps=[0], tcolors=['k'], thin_factor=1,
+                      axis=None):
+    """
+    parameters:
+    -----------
     
-    labels = []
-    for i in flatten(objective.parameters.varying_parameters()):
-        labels.append(i.name)
+    parameter:  refnx parameter object of parameter to be plotted
 
-    # Print walker tracks
+    samples:    parameter values to plot with shape [ntemps, nwalkers, nsteps]
+                or [nwalkers, nsteps]]
+        
+    temps:      list of temps to plot
     
-    if len(chain.shape) == 3: # Not parallel tempering
-        num_subplot_rows = int(np.ceil(chain.shape[2]/2))
-        plt.figure(figsize=(14,5*num_subplot_rows))
-        for c in range(chain.shape[2]):
-
-            plt.subplot(num_subplot_rows,2,c+1)
-            plt.title(str(c) + ' ' + labels[c])
-            for j in chain:
-                plt.plot(j[:,c], alpha=0.1, color='k')
-            plt.axvline(x=burn, color='red', linestyle='dashed')
-
-    else: #then PT
-        num_subplot_rows = int(np.ceil(chain.shape[3]/2))
-        plt.figure(figsize=(14,5*num_subplot_rows))
-        for c in range(chain.shape[3]):
-
-            plt.subplot(num_subplot_rows,2,c+1)
-            plt.title(str(c) + ' ' + labels[c])
-            for temp in chain:
-                for walker in temp:
-                    plt.plot(walker[:,c], alpha=0.1, color='k')
-                plt.axvline(x=burn, color='red', linestyle='dashed')
+    tcolours:   list of colours to use for temps - must be sample length as temps
+    
+        
+    axis:       a matplotlib axis object on which the trace profile
+                will be plotted.
+                
+    thin_factor: If the samples have already been thinned the thin factor can
+                be supplied so that the step number will be correct.
+    """
+    
+    if axis is None:
+        fig, axis = plt.subplots()
+    
+    if len(samples.shape) == 2: # No parallel tempering
+        samples = np.array([samples])
+        temps = [0]
         
     
-    return plt.gcf()
+    steps = np.linspace(0,thin_factor*(samples.shape[2]-1), samples.shape[2])
+
+    leg = []
+    for t, c in zip(temps, tcolors):
+        leg.append(mpatches.Patch(color=c, label=('temp: %d' % t)))
+        for samp in samples[t]:
+            axis.plot(steps, samp, color=c, alpha=0.2)
+    
+    
+    axis.plot(steps, np.ones(steps.shape) * parameter.bounds.lb, color='b')
+    axis.plot(steps, np.ones(steps.shape) * parameter.bounds.ub, color='b')
+    axis.set_xlabel('step number')
+    axis.set_ylabel('parameter value')
+    axis.legend(handles=leg, loc='lower left')
 
         
 def plot_corner(objective, samples):
