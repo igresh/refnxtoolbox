@@ -226,10 +226,11 @@ def plot_burnplot (objective, chain, burn=None, number_histograms=15, thin_facto
     if len(chain.shape) > 3: # Then parallel tempering
           chain = chain[0]   # Only use lowest temperature
 
-    chain_index = np.linspace(0, chain.shape[2]-1, number_histograms).astype(int)
+    chain_index = np.linspace(0, chain.shape[1]-1, number_histograms).astype(int)
     param_index = range(len(objective.varying_parameters()))
-    alphas = (chain_index - chain_index[0])/float(chain_index[-1] - chain_index[0])
+    alphas = 0.1 + 0.9*(chain_index + chain_index[0])/float(chain_index[-1] - chain_index[0])
 
+    print (alphas)
     if burn is None:            # If burn is not supplied then
         burn = chain_index[-1]  # do not plot any as red 
         
