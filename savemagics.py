@@ -151,7 +151,7 @@ def writeShell(name, direc, timeh, nCPUs):
 #PBS -l software=refnx\n\
 #PBS -l wd\n\
 \n\
-source home/561/ig8882/venv/refnx-activate\n\
+source /home/561/ig8882/venv/refnx-activate\n\
 \n\
 mpirun -np 8 python %s_run.py"%(timeh, nCPUs, name)
 

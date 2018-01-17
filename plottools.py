@@ -218,19 +218,18 @@ def plot_burnplot (objective, chain, burn=None, number_histograms=15, thin_facto
     output:
     -------
     Returns a figure object
-    """
-    num_subplot_rows = int(chain.shape[3])
-
-    fig, ax = plt.subplots(num_subplot_rows,2)
+    """  
     
     if len(chain.shape) > 3: # Then parallel tempering
           chain = chain[0]   # Only use lowest temperature
 
-    chain_index = np.linspace(0, chain.shape[1]-1, number_histograms).astype(int)
-    param_index = range(len(objective.varying_parameters()))
-    alphas = 0.1 + 0.9*(chain_index + chain_index[0])/float(chain_index[-1] - chain_index[0])
+    num_subplot_rows = int(chain.shape[2])
+    fig, ax = plt.subplots(num_subplot_rows,2)
 
-    print (alphas)
+    chain_index = np.linspace(int(0.05*chain.shape[1]), chain.shape[1]-1, number_histograms).astype(int)
+    param_index = range(len(objective.varying_parameters()))
+    alphas = 0.09 + 0.9*(chain_index - chain_index[0])/float(chain_index[-1] - chain_index[0])
+
     if burn is None:            # If burn is not supplied then
         burn = chain_index[-1]  # do not plot any as red 
         
@@ -254,7 +253,6 @@ def plot_burnplot (objective, chain, burn=None, number_histograms=15, thin_facto
                 col = 'k'
             else:
                 col = 'r'
-                
             axis[1].hist(chain[:,cindex,pindex], bins=12,  normed=True,
                          histtype='step',alpha=alpha, color=col)
             mod_cindex = thin_factor*cindex
