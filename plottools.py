@@ -310,6 +310,53 @@ def plot_walker_trace(parameter, samples, temps=[0], tcolors=['k'], thin_factor=
     axis.set_ylabel('parameter value')
     axis.legend(handles=leg, loc='lower left')
 
+    
+def plot_quantile_profile(x_axes, y_axes, axis=None, quantiles=[68,95,99.8], color='k'):
+    """
+    Turn an ensembel of profiles into a plot with shaded areas corresponding to distribution quantiles
+    
+    parameters:
+    -----------
+    x_axes: python list-type object of profile x-axes
+    y_axes: python list-type object of profile y-axes
+    axis:   matplotlib axis object
+    """
+    max_len = 0
+    max_x_axis = []
+    
+    if axis==None:
+        fig, axis = plt.subplots()
+
+    for x_axis, y_axis in zip(x_axes, y_axes):
+        assert len(x_axis) == len(y_axis) , 'x and y axes must be the same length'
+        if y_axis.shape[0] > max_len:
+            max_len = y_axis.shape[0]
+            max_x_axis = x_axis
+
+    x_axis = max_x_axis
+    y_axes_array = np.zeros([len(y_axes), max_len])
+    for index, y_axis in enumerate(y_axes):
+        y_axes_array[index, 0:len(y_axis)] = y_axis
+
+    tran_y_axes = y_axes_array.T
+
+
+    for quantile in quantiles:
+        q_l = (100 - quantile)/2
+        q_h = 100-(100 - quantile)/2
+        print (q_l, q_h)
+
+        y_l = np.percentile(tran_y_axes, q_l, axis=1)
+        y_h = np.percentile(tran_y_axes, q_h, axis=1)
+
+        mask =  y_h > 0
+        axis.fill_between(x_axis[mask], y_l[mask], y_h[mask], color=color, alpha=0.3)
+
+
+    y_median = np.median(tran_y_axes, axis=1)
+    mask = y_median > 0
+    axis.plot(x_axis[mask], y_median[mask], color=color)  
+
         
 def plot_corner(objective, samples):
     labels = []
