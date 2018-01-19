@@ -218,19 +218,25 @@ def plot_burnplot (objective, chain, burn=None, number_histograms=15, thin_facto
     output:
     -------
     Returns a figure object
-    """
-    num_subplot_rows = int(chain.shape[3])
-
-    fig, ax = plt.subplots(num_subplot_rows,2)
-    
+    """  
+    ptchain = None
     if len(chain.shape) > 3: # Then parallel tempering
-          chain = chain[0]   # Only use lowest temperature
+        ptchain = chain
+        temps = np.flipud(np.linspace(0, ptchain.shape[0]-1, 5).astype(int))
+        colours = plt.cm.Blues(temps/np.max(temps))
+        chain = chain[0]   # Only use lowest temperature
+    else:
+        temps = [0]
+        colours = 'k'
+        ptchain = np.array([chain])
 
-    chain_index = np.linspace(0, chain.shape[1]-1, number_histograms).astype(int)
+    num_subplot_rows = int(chain.shape[2])
+    fig, ax = plt.subplots(num_subplot_rows,2)
+
+    chain_index = np.linspace(int(0.05*chain.shape[1]), chain.shape[1]-1, number_histograms).astype(int)
     param_index = range(len(objective.varying_parameters()))
-    alphas = 0.1 + 0.9*(chain_index + chain_index[0])/float(chain_index[-1] - chain_index[0])
+    alphas = 0.09 + 0.9*(chain_index - chain_index[0])/float(chain_index[-1] - chain_index[0])
 
-    print (alphas)
     if burn is None:            # If burn is not supplied then
         burn = chain_index[-1]  # do not plot any as red 
         
@@ -240,8 +246,8 @@ def plot_burnplot (objective, chain, burn=None, number_histograms=15, thin_facto
         param = objective.varying_parameters()[pindex]
 
          
-        plot_walker_trace(param, chain[:,:,pindex], axis=axis[0],
-                          thin_factor=thin_factor)
+        plot_walker_trace(param, ptchain[:,:,:,pindex], axis=axis[0], temps=temps,
+                          tcolors=colours, thin_factor=thin_factor)
         
         axis[0].set_title(param.name + ' - value trace')
         axis[1].set_title(param.name + ' - PDF')
@@ -254,7 +260,6 @@ def plot_burnplot (objective, chain, burn=None, number_histograms=15, thin_facto
                 col = 'k'
             else:
                 col = 'r'
-                
             axis[1].hist(chain[:,cindex,pindex], bins=12,  normed=True,
                          histtype='step',alpha=alpha, color=col)
             mod_cindex = thin_factor*cindex
@@ -265,7 +270,7 @@ def plot_burnplot (objective, chain, burn=None, number_histograms=15, thin_facto
 
         
 def plot_walker_trace(parameter, samples, temps=[0], tcolors=['k'], thin_factor=1,
-                      axis=None):
+                      axis=None, legend=False):
     """
     parameters:
     -----------
@@ -299,7 +304,7 @@ def plot_walker_trace(parameter, samples, temps=[0], tcolors=['k'], thin_factor=
 
     leg = []
     for t, c in zip(temps, tcolors):
-        leg.append(mpatches.Patch(color=c, label=('temp: %d' % t)))
+        leg.append(mpatches.Patch(color=c, label=('T %d' % t)))
         for samp in samples[t]:
             axis.plot(steps, samp, color=c, alpha=0.2)
     
@@ -308,7 +313,11 @@ def plot_walker_trace(parameter, samples, temps=[0], tcolors=['k'], thin_factor=
     axis.plot(steps, np.ones(steps.shape) * parameter.bounds.ub, color='b')
     axis.set_xlabel('step number')
     axis.set_ylabel('parameter value')
-    axis.legend(handles=leg, loc='lower left')
+    
+    if legend:
+        leg.reverse()
+        axis.legend(handles=leg, loc='lower center', ncol=5)
+
 
     
 def plot_quantile_profile(x_axes, y_axes, axis=None, quantiles=[68,95,99.8], color='k'):
