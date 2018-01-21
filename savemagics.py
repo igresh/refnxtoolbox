@@ -106,13 +106,16 @@ def approx_walltime(nwalkers, ntemps, nsteps, nparameters, nCPUs, time_per_calc 
 def writeMPI(objective_name, direc, nwalkers, ntemps, nsteps, nthin, init_method = 'prior', buffering=100):
     """
     """
-    
+
     code = "\
 import sys\n\
-from refnx.analysis import CurveFitter\n\
+import os\n\
+import glob\n\
+from refnx.analysis import CurveFitter, load_chain\n\
 from schwimmbad import MPIPool\n\
 from %s import *\n\
 objective = setup('%s.dat')\n\
+\n\
 with MPIPool() as pool:\n\
     if not pool.is_master():\n\
         pool.wait()\n\
@@ -122,20 +125,36 @@ with MPIPool() as pool:\n\
     ntemps=%d\n\
     nsteps=%d\n\
     nthin=%d\n\
+    total_steps = nsteps\n\
+\n\
+    filename = ('%s' + '_samplechain_' + \n\
+                str(nwalkers) + 'walkers_' + \n\
+                str(ntemps) + 'temps_' + \n\
+                '*' + 'steps_' + \n\
+                str(nthin) + 'thinned.txt')\n\
+\n\
+    maybe_existing_files = glob.glob(filename)\
 \n\
     fitter = CurveFitter(objective, nwalkers=nwalkers, ntemps=ntemps)\n\
-\n\
     fitter.initialise('%s')\n\
 \n\
-    with open('%s' + '_samplechain_' +\n\
-              str(nwalkers) + 'walkers_' +\n\
-              str(ntemps) + 'temps_' + \n\
-              str(nsteps) + 'steps_' + \n\
-              str(nthin) + 'thinned.txt',\n\
-              'a', buffering=%d) as fh:\n\
 \n\
+    if len(maybe_existing_files) > 0:\n\
+        existing_file = maybe_existing_files[0]\n\
+        print ('resuming from chain: ' , existing_file)\n\
+        existing_steps = int(existing_file[0:existing_file.find('steps_')].split('_')[-1])\n\
+        total_steps += existing_steps\n\
+        chain = load_chain(existing_file)\n\
+        fitter._lastpos = chain[:,:,-1,:]\n\
+        new_filename = filename.replace('_*steps_', ('_'+str(total_steps)+'steps_'))\n\
+        os.rename(existing_file, new_filename)\n\
+    else:\n\
+        new_filename = filename.replace('_*steps_', ('_'+str(total_steps)+'steps_'))\n\
+\n\
+\n\
+    with open(new_filename, 'a', buffering=%d) as fh:\n\
         fitter.sample(nsteps, nthin=nthin, pool=pool, verbose=True, f=fh)\
-"%(objective_name, objective_name, nwalkers, ntemps, nsteps, nthin, init_method, objective_name, buffering)
+"%(objective_name, objective_name, nwalkers, ntemps, nsteps, nthin, objective_name, init_method, buffering)
         
     filename = direc + objective_name + "_run.py"
         

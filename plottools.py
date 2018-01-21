@@ -5,10 +5,16 @@ import matplotlib.patches as mpatches
 import corner
 import refnx
 import sys
+import re
+import array
+
 sys.path.append("/mnt/1D9D9A242359B87C/Git Repos/refnx/examples/analytical_profiles/brushes/")
 sys.path.append("/Users/Isaac/Documents/GitRepos/refnx/examples/analytical_profiles/brushes/")
 
 import brush
+from refnx._lib import possibly_open_file
+
+
 
 def unpack_objective(obj):
     data = obj.data
@@ -320,7 +326,7 @@ def plot_walker_trace(parameter, samples, temps=[0], tcolors=['k'], thin_factor=
 
 
     
-def plot_quantile_profile(x_axes, y_axes, axis=None, quantiles=[68,95,99.8], color='k'):
+def plot_quantile_profile(x_axes, y_axes, axis=None, quantiles=[68,95,99.8], color='k', fullreturn=False):
     """
     Turn an ensembel of profiles into a plot with shaded areas corresponding to distribution quantiles
     
@@ -349,7 +355,7 @@ def plot_quantile_profile(x_axes, y_axes, axis=None, quantiles=[68,95,99.8], col
 
     tran_y_axes = y_axes_array.T
 
-
+    quant_dict = {}
     for quantile in quantiles:
         q_l = (100 - quantile)/2
         q_h = 100-(100 - quantile)/2
@@ -357,14 +363,23 @@ def plot_quantile_profile(x_axes, y_axes, axis=None, quantiles=[68,95,99.8], col
 
         y_l = np.percentile(tran_y_axes, q_l, axis=1)
         y_h = np.percentile(tran_y_axes, q_h, axis=1)
-
+        
+        quant_dict[str(q_l) + ' low'] = y_l
+        quant_dict[str(q_l) + ' high'] = y_h
+        
         mask =  y_h > 0
         axis.fill_between(x_axis[mask], y_l[mask], y_h[mask], color=color, alpha=0.3)
 
 
     y_median = np.median(tran_y_axes, axis=1)
     mask = y_median > 0
-    axis.plot(x_axis[mask], y_median[mask], color=color)  
+    axis.plot(x_axis[mask], y_median[mask], color=color)
+    
+    quant_dict['median'] = y_median
+    quant_dict['xaxis'] = x_axis
+
+    if fullreturn == True:
+        return quant_dict
 
         
 def plot_corner(objective, samples):
@@ -731,3 +746,62 @@ def find_FFVFP (struct):
         if isinstance(i, brush.FreeformVFP):
             return i
     return None
+
+
+def load_chain(f):
+    """
+    Loads a chain from disk. Does not change the state of a CurveFitter
+    object.
+
+    Parameters
+    ----------
+    f : str or file-like
+        File containing the chain.
+
+    Returns
+    -------
+    chain : array
+        The loaded chain - `(nwalkers, nsteps, ndim)` or
+        `(ntemps, nwalkers, nsteps, ndim)`
+    """
+    with possibly_open_file(f, 'r') as g:
+        # read header
+        header = g.readline()
+        expr = re.compile('(\d+)')
+        matches = expr.findall(header)
+        if matches:
+            if len(matches) == 3:
+                ntemps, nwalkers, ndim = map(int, matches)
+                chain_size = ntemps * nwalkers * ndim
+            elif len(matches) == 2:
+                ntemps = None
+                nwalkers, ndim = map(int, matches)
+                chain_size = nwalkers * ndim
+        else:
+            raise ValueError("Couldn't read header line of chain file")
+
+        # make an array that's the appropriate size
+        read_arr = array.array("d")
+
+        i = 0
+        for l in g:
+            if l[0] == '#':
+                print ('ignored comment: ' , l)
+            else:
+                read_arr.extend(np.fromstring(l,
+                                              dtype=float,
+                                              count=chain_size,
+                                              sep=' '))
+                i += 1
+
+        chain = np.frombuffer(read_arr, dtype=np.float, count=len(read_arr))
+
+        if ntemps is not None:
+            chain = np.reshape(chain, (i, ntemps, nwalkers, ndim))
+            chain = np.swapaxes(chain, 0, 2)
+            chain = np.swapaxes(chain, 0, 1)
+        else:
+            chain = np.reshape(chain, (i, nwalkers, ndim))
+            chain = np.swapaxes(chain, 0, 1)
+
+        return chain
