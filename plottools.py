@@ -13,6 +13,7 @@ sys.path.append("/Users/Isaac/Documents/GitRepos/refnx/examples/analytical_profi
 
 import brush
 from refnx._lib import possibly_open_file
+from refnx.analysis import process_chain
 
 
 
@@ -50,7 +51,7 @@ def plot_logrefl(objective, axis=None, colour=None, alpha=1, limits=None, plot_l
     
     if plot_labels:
         axis.set_xlabel(r'$Q$')
-        axis.set_ylabel(r'log$(R)$')
+        axis.set_ylabel(r'$R$')
     
     axis.set_yscale('log')
         
@@ -83,7 +84,7 @@ def plot_rq4refl(objective, axis=None, colour=None, alpha=1, limits=None, plot_l
     
     if plot_labels:
         axis.set_xlabel(r'$Q$')
-        axis.set_ylabel(r'log$(RQ^4)$')
+        axis.set_ylabel(r'$RQ^4$')
         
     axis.set_yscale('log')
         
@@ -134,7 +135,7 @@ def plot_refl(objective, axis, colour = None, alpha = 1, limits = None, plot_lin
 
 def plot_SLD(objective, axis=None, colour = 'k', alpha = 1, plot_labels=False):
     if plot_labels:
-        axis.set_xlabel(r'z, $\AA$')
+        axis.set_xlabel(r'z, $\mathrm{\AA}$')
         axis.set_ylabel(r'SLD')
     
     if isinstance(objective, refnx.analysis.objective.GlobalObjective):
@@ -166,7 +167,7 @@ def plot_SLD(objective, axis=None, colour = 'k', alpha = 1, plot_labels=False):
 def plot_VFP(objective, axis=None, colour = 'k', alpha = 1, plot_labels=False):
     
     if plot_labels:
-        axis.set_xlabel(r'z, $\AA$')
+        axis.set_xlabel(r'z, $\mathrm{\AA}$')
         axis.set_ylabel(r'Volume Fraction')
 
     if isinstance(objective, refnx.analysis.objective.GlobalObjective):
@@ -236,7 +237,7 @@ def plot_burnplot (objective, chain, burn=None, number_histograms=15, thin_facto
         colours = 'k'
         ptchain = np.array([chain])
 
-    num_subplot_rows = int(chain.shape[2])
+    num_subplot_rows = int(chain.shape[2]) + 1
     fig, ax = plt.subplots(num_subplot_rows,2)
 
     chain_index = np.linspace(int(0.05*chain.shape[1]), chain.shape[1]-1, number_histograms).astype(int)
@@ -246,8 +247,10 @@ def plot_burnplot (objective, chain, burn=None, number_histograms=15, thin_facto
     if burn is None:            # If burn is not supplied then
         burn = chain_index[-1]  # do not plot any as red 
         
-    for pindex, axis in\
-        zip(param_index, ax):
+    ax[0][1].set_title('Log Posterior Probability')
+    plot_lnprob_distribution(objective, chain, burn=burn, axis=ax[0][1])
+                             
+    for pindex, axis in zip(param_index, ax[1:]):
         
         param = objective.varying_parameters()[pindex]
 
@@ -274,6 +277,31 @@ def plot_burnplot (objective, chain, burn=None, number_histograms=15, thin_facto
             
     return fig
 
+def plot_lnprob_distribution(objective, chain, burn=0, axis=None, colour='k'):
+    """
+    parameters:
+    -----------
+    
+    objective:  Refnx Objective Object
+    
+    samples:    Ensemble of walkers to plot lnprob for, shaped [nwalkers,nparameters]
+    """
+    if len(chain.shape) > 3: # PT
+        chain = chain [0]
+
+    #burn
+    chain = chain[:, burn:, :]
+    samples = chain.reshape((-1,chain.shape[2]))
+    if axis is None:
+        fig, axis = plt.subplots()
+        
+    lnprobs = []
+    for sample in samples:
+        objective.setp(sample)
+        lnprobs.append(objective.lnprob())
+
+    axis.hist(lnprobs,  normed=True, histtype='step',alpha=1, color=colour)
+        
         
 def plot_walker_trace(parameter, samples, temps=[0], tcolors=['k'], thin_factor=1,
                       axis=None, legend=False):
@@ -438,6 +466,12 @@ def plot_cluster_profiles(db, objective, samples, lnprob = None):
         plt.legend(handles=leg_labels)
 
     return plt.gcf()
+
+
+
+
+
+### OLD BELOW ###
 
 def process_data(fitter, burn=0, flatten = False, thin=0):
     """
