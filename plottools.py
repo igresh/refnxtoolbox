@@ -247,7 +247,7 @@ def plot_burnplot (objective, chain, burn=None, number_histograms=15, thin_facto
     if burn is None:            # If burn is not supplied then
         burn = chain_index[-1]  # do not plot any as red 
         
-    ax[0][1].set_title('Log Posterior Probability')
+    ax[0][1].set_title('LnProb for Post-Burn Samples')
     plot_lnprob_distribution(objective, chain, burn=burn, axis=ax[0][1])
                              
     for pindex, axis in zip(param_index, ax[1:]):
@@ -284,7 +284,10 @@ def plot_lnprob_distribution(objective, chain, burn=0, axis=None, colour='k'):
     
     objective:  Refnx Objective Object
     
-    samples:    Ensemble of walkers to plot lnprob for, shaped [nwalkers,nparameters]
+    chain:      a numpy.ndarray object with shape [#temperatures, #walkers, 
+                #steps, #parameters] or [#walkers, #steps, #parameters]
+    
+    burn:       Number of steps to remove from chain before processing
     """
     if len(chain.shape) > 3: # PT
         chain = chain [0]
@@ -301,8 +304,8 @@ def plot_lnprob_distribution(objective, chain, burn=0, axis=None, colour='k'):
         lnprobs.append(objective.lnprob())
 
     axis.hist(lnprobs,  normed=True, histtype='step',alpha=1, color=colour)
-        
-        
+    
+       
 def plot_walker_trace(parameter, samples, temps=[0], tcolors=['k'], thin_factor=1,
                       axis=None, legend=False):
     """

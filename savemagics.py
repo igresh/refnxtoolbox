@@ -41,11 +41,6 @@ class CellWriter(Magics):
             
         filename = line + ".py"
         
-        imports = "\
-from brush import FreeformVFP, SoftTruncPDF\n\
-from refnx.reflect import SLD, Slab, ReflectModel\n\
-from refnx.dataset import ReflectDataset as RD\n"
-        
         name_func = "\n\
 def name():\n\
     return '%s'\n\
@@ -55,7 +50,6 @@ def name():\n\
         with open(filename, 'w') as fh: # Save the cell + metadata as a .py file
             fh.write(created)
             fh.write(user)
-            fh.write(imports)
             fh.write(cell)
             fh.write(name_func)
             
