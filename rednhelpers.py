@@ -1,6 +1,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.cm
 import os.path
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -112,6 +113,12 @@ def check_scale_factor(dataset, qc, name=None, show=True,
 
 
 def check_scale_factors(datasets, qc, **kwargs):
+    """kwargs:
+        name=None
+        show=True
+        calc_max=0.9
+        plot_max=1.1
+        """
     scales = []
     for d in datasets:
         print(d.name, end='\t')
@@ -128,7 +135,7 @@ def apply_scale_factors(datasets, qc=None, scales=None, **kwargs):
 
 
 def plot_data_sets(data, qmax=None, title=None, offset=1, divisor=1,
-                  fig=None, axs=None):
+                  fig=None, axs=None, cmap=None):
     """
     Plot reflectometry data sets
 
@@ -155,6 +162,8 @@ def plot_data_sets(data, qmax=None, title=None, offset=1, divisor=1,
         Plot Figure onto which curves will be plotted
     axs : list or tuple of matplotlib axes
         Axes onto which the curves will be plotted
+    cmap : str
+        Name of a matplotlib colormap to apply to the data sets
     """
     if axs is None:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14,6))
@@ -163,6 +172,12 @@ def plot_data_sets(data, qmax=None, title=None, offset=1, divisor=1,
 
     factor = divisor
 
+    if cmap:
+        colormap = matplotlib.cm.get_cmap(cmap)
+        colorcycle = colormap(np.linspace(0.2, 0.8, len(data)))
+        ax1.set_prop_cycle('color', colorcycle)
+        ax2.set_prop_cycle('color', colorcycle)
+    
     for dataset in data:
         try:
             ds = dataset.ds
@@ -171,16 +186,19 @@ def plot_data_sets(data, qmax=None, title=None, offset=1, divisor=1,
             ds, label = dataset
             #raise ValueError("Don't know how to deal with dataset", dataset)
 
-        ax1.errorbar(ds.data[0], ds.data[1] * factor,
-                     yerr=ds.data[2] * factor,
-                     marker='.', label=label)
+        try:
+            ax1.errorbar(ds.data[0], ds.data[1] * factor,
+                         yerr=ds.data[2] * factor,
+                         marker='.', label=label)
 
-        #ax2.plot(ds.data[0], ds.data[1] * ds.data[0]**4)
-        ax2.errorbar(ds.data[0], ds.data[1] * factor * ds.data[0]**4,
-                     yerr=(ds.data[2] * factor * ds.data[0]**4),
-                     marker='.', label=label)
+            #ax2.plot(ds.data[0], ds.data[1] * ds.data[0]**4)
+            ax2.errorbar(ds.data[0], ds.data[1] * factor * ds.data[0]**4,
+                         yerr=(ds.data[2] * factor * ds.data[0]**4),
+                         marker='.', label=label)
 
-        factor /= offset
+            factor /= offset
+        except AttributeError:
+            print("Warning: data set was skipped: %s\n%s" % (dataset.name, str(dataset)))
 
     ax1.set_yscale('log')
     if qmax is not None:

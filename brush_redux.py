@@ -150,8 +150,24 @@ class FreeformVFP(Component):
                                       'vff': np.array([]),
                                       'interp': None,
                                       'extent': -1}
-
+    def _update_vfs (self):
+        # use the volume fraction of the last left_slab as the initial vf of
+        # the spline, if not left slabs supplied start at vff 1
+        if len(self.left_slabs):
+            self.start_vf = 1 - self.left_slabs[-1].vfsolv.value
+        else:
+            self.start_vf = 1
+              
+        # in contrast use a vf = 0 for the last vf of
+        # the spline, unless right_slabs is specified
+        if len(self.right_slabs):
+            self.end_vf = 1 - self.right_slabs[0].vfsolv.value
+        else:
+            self.end_vf = 0
+            
+            
     def _vff_to_vf(self):
+        self._update_vfs()
         return np.cumprod(self.vff) * (self.start_vf-self.end_vf) + self.end_vf
     
     def _extent(self):
