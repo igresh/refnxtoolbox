@@ -84,7 +84,6 @@ class area_Slab(Component):
         
         layer = m(thick, rough)
         layer.vfsolv.value = vfsolv
-        print (layer.thick, layer.vfsolv)
         s |= layer
         s |= SLD(0)
         s.solvent = SLD(0)
