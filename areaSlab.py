@@ -5,7 +5,7 @@ Created on Sun Mar 18 13:32:40 2018
 @author: igres
 """
 from refnx.analysis import Parameters, Parameter, possibly_create_parameter
-from refnx.reflect import SLD, Component
+from refnx.reflect import SLD, Component, Structure
 import numpy as np
 
 class area_Slab(Component):
@@ -62,9 +62,39 @@ class area_Slab(Component):
         """
         slab representation of this component. See :class:`Structure.slabs`
         """
-        thick = self.dry_thickness/(1-self.vfsolv.value)
+        thick = self.dry_thickness.value/(1-self.vfsolv.value)
         return np.atleast_2d(np.array([thick,
                                        self.sld.real.value,
                                        self.sld.imag.value,
                                        self.rough.value,
                                        self.vfsolv.value]))
+    
+    def profile(self, reverse=False):
+        """
+        returns the vfp for this    component.
+        """
+        m = SLD(1.)
+        s = Structure()
+        s |= SLD(0)
+        
+        slab = self.slabs[0]
+        thick = slab[0]
+        rough = slab[3]
+        vfsolv = slab[4]
+        
+        layer = m(thick, rough)
+        layer.vfsolv.value = vfsolv
+        print (layer.thick, layer.vfsolv)
+        s |= layer
+        s |= SLD(0)
+        s.solvent = SLD(0)
+
+        if reverse:
+            s.reverse_structure = True
+
+        zed = np.linspace(0, thick*1.1, thick*1.1 + 1)
+        
+        zed[0] = 0.01
+        z, s = s.sld_profile(z=zed)
+        
+        return z, s
