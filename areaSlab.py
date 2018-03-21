@@ -8,6 +8,147 @@ from refnx.analysis import Parameters, Parameter, possibly_create_parameter
 from refnx.reflect import SLD, Component, Structure
 import numpy as np
 
+class ConstrainedAmountModel(Component):
+    """
+    Component that scales the length of a structure to ensure that adsorbed
+    amount of a component of interest (COI) is constrained.
+    
+    If no pure_SLD is provided the system is treated as a 2-component system, 
+    made up of the COI and the system solvent (which is supplied to the final
+    structure). The solvent volume fractions (and thicknesses) of the provided
+    slabs are used to calculate the adsorbed amount. No questions
+    are asked if slab SLDs differ.
+    
+    If a pure_SLD is provided the system is treated as a 3-component system,
+    made up of the COI, the system solvent and a 'filler' substance, which is
+    assumed to be air (SLD 0). The solvent volume fractions are used as the
+    solvent fractions, and the slab SLDs and pure SLDs are used to calculate
+    the filler-COI volume fractions. The overall COI volume fraction is used
+    to calculate (and constrain) the adsorbed amount.
+    
+    If both a pure_SLD and filler_SLD is provided the system is treated as a
+    3-component system, made up of the COI, the system solvent and a 'filler' 
+    substance. The solvent volume fractions are used as the solvent fractions,
+    and the slab SLDs and pure SLDs are used to calculate the filler-COI volume
+    fractions. The overall COI volume fraction is used to calculate (and
+    constrain) the adsorbed amount.
+    
+    Parameters:
+        pure_thick (float) - Hypothetical thickness of a pure layer of the
+        compound of interest.
+        
+        structure (refnx.reflect.structure.Structure) - structure of slabs, the
+        adsorbed amount of which will be constrained by scaling its thickness.
+        
+        name (str) - optional identifier for the component.
+        
+        pure_sld (SLD, float, None) - SLD of the pure compound of interest.
+        
+        pure_sld (SLD, float, None) - SLD of the filler (non solvent) compound.
+    """
+    def __init__(self, pure_thick, structure, name='', pure_sld=None, filler_sld=None):
+        super(ConstrainedAmountModel, self).__init__()
+        
+        self.name = name
+
+        self.pure_thick = possibly_create_parameter(pure_thick,
+                                               name='%s - dry thickness' % self.name)
+        
+        self.structure = structure
+        
+        self.pure_sld = pure_sld
+        
+        if isinstance(pure_sld, SLD):
+            self.pure_sld = pure_sld
+        elif pure_sld != None:
+            self.pure_sld = SLD(pure_sld)
+          
+        if isinstance(filler_sld, SLD):
+            self.filler_sld = filler_sld
+        elif filler_sld != None:
+            self.filler_sld = SLD(filler_sld)
+        elif pure_sld != None:
+            print ('warning: Filler SLD assumed to be 0')
+            self.filler_sld = SLD(0)
+
+
+    def profile(self, reverse=False, end_roughness=0):
+        """
+        Calculates the volume fraction profile
+
+        Returns
+        -------
+        z, vfp : np.ndarray
+            Distance from the interface, volume fraction profile
+        """
+        
+        # Just create a SLD structure that varies between 0 and 1. Bit of a
+        # hack, but works fine.
+        s = Structure()
+        s |= SLD(0)(0)
+
+        m = SLD(1.)
+
+        for i, slab in enumerate(self.slabs):
+            layer = m(slab[0], slab[3])
+            if self.pure_sld == None: #Two component system
+                layer.vfsolv.value = slab[4]
+            else: #3+ component system
+                # Get COI:Filler ratio from SLD
+                unsolvated_nonfill_fraction =\
+                (slab[1] - self.filler_sld.real.value)/ (self.pure_sld.real.value - self.filler_sld.real.value)
+                
+                # Multiply COI:filler fraction by COI+Filler:Solvent Fraction
+                layer.vfsolv.value = 1-((1-slab[4])*unsolvated_nonfill_fraction)
+
+            s |= layer
+            
+        s |= SLD(0)(0,end_roughness)
+        s.solvent = 0
+        s.reverse_structure = reverse
+        # now calculate the VFP.
+        total_thickness = np.sum(self.slabs[:, 0])
+        buffer = total_thickness*0.1
+        zed = np.linspace(-buffer, buffer+total_thickness, 1000)
+        z, s = s.sld_profile(z=zed)
+        
+        return z, s
+
+
+    @property
+    def parameters(self):
+        p = Parameters(name=self.name)
+        p.extend([self.pure_thick])
+        p.extend([component.parameters for component in self.structure])
+        return p
+    
+    @property
+    def slabs(self):
+        """
+        slab representation of this component. See :class:`Structure.slabs`
+        """
+        if self.pure_sld == None: # Two component System
+            struct_purethick = np.sum(self.structure.slabs[:,0]*(
+                    1-self.structure.slabs[:,4]))
+        else: # 3+ Component system
+            # Find COI:filler ratio
+            # (obs_SLD - filler_SLD)/(pure_SLD - filler_SLD)
+            unsolvated_nonfill_fraction = ((self.structure.slabs[:,1] - self.filler_sld.real.value)/
+                                   (self.pure_sld.real.value - self.filler_sld.real.value))
+            # Find theoretical thickness of a pure COI layer
+            struct_purethick = np.sum(self.structure.slabs[:,0]*
+                                      (1-self.structure.slabs[:,4])*
+                                      unsolvated_nonfill_fraction)
+            
+        # Will scale thickness such that theoretical thickness will match set
+        # thickness.
+        scale = self.pure_thick/float(struct_purethick)
+        new_slabs = self.structure.slabs
+        new_slabs[:,0] = new_slabs[:,0]*scale
+        new_slabs[:,3] = new_slabs[:,3]*scale # Will also scale roughnesses
+        return new_slabs
+
+
 class area_Slab(Component):
     """
     A slab component has uniform SLD over its thickness.
