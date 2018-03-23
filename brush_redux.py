@@ -1,47 +1,13 @@
 from __future__ import division
-import os.path
-from collections import namedtuple
 import numpy as np
 
 from scipy.interpolate import PchipInterpolator as Pchip
 from scipy.integrate import simps
-from scipy.stats import truncnorm
 
-from refnx.reflect import ReflectModel, Structure, Component, SLD, Slab
-from refnx.analysis import (Bounds, Parameter, Parameters,
-                            possibly_create_parameter)
+from refnx.reflect import Structure, Component, SLD, Slab
+from refnx.analysis import Parameters, possibly_create_parameter
 
 EPS = np.finfo(float).eps
-
-
-class SoftTruncPDF(object):
-    """
-    Gaussian distribution with soft truncation
-    """
-    def __init__(self, mean, sd, lhs=None, rhs=None):
-        self.a, self.b = -np.inf, np.inf
-        self.lhs = -np.inf
-        self.rhs = np.inf
-        if lhs is not None:
-            self.lhs = lhs
-            self.a = (lhs - mean) / sd
-        if rhs is not None:
-            self.rhs = rhs
-            self.b = (rhs - mean) / sd
-
-        self._pdf = truncnorm(self.a, self.b, mean, sd)
-
-    def logpdf(self, val):
-        prob = self._pdf.logpdf(val)
-        if val < self.lhs:
-            return (val - self.lhs) * 10000
-        if val > self.rhs:
-            return (self.rhs - val) * 10000
-        return prob
-
-    def rvs(self, size=1):
-        return self._pdf.rvs(size)
-
 
 class FreeformVFP(Component):
     """
@@ -78,6 +44,10 @@ class FreeformVFP(Component):
         microslab_max_thickness : float
             Thickness of microslicing of spline for reflectivity calculation.
         """
+        
+        assert len(vff) + 1 == len(dzf) , 'Length of dzf must be one greater\
+                                           than length of vff'
+
         self.name = name
 
         if isinstance(polymer_sld, SLD):
@@ -112,7 +82,7 @@ class FreeformVFP(Component):
             possibly_create_parameter(adsorbed_amount,
                                       name='%s - adsorbed amount' % name))
 
-        # dzf are the spatial spacings of the spline knots
+        # dzf are the spatial gaps between the spline knots
         self.dzf = Parameters(name='dzf - spline')
         for i, z in enumerate(dzf):
             p = possibly_create_parameter(
@@ -129,9 +99,6 @@ class FreeformVFP(Component):
                 name='%s - spline vff[%d]' % (name, i))
             p.range(0, 1)
             self.vff.append(p)
-
-        if len(self.vff) != len(self.dzf):
-            raise ValueError("dzf and vs must have same number of entries")
 
         self.zgrad = zgrad
         self.interpolator = interpolator
@@ -159,7 +126,16 @@ class FreeformVFP(Component):
     def _vff_to_vf(self):
         self._update_vfs()
         return np.cumprod(self.vff) * (self.start_vf-self.end_vf) + self.end_vf
-
+    
+    def _dzf_to_zeds(self):
+        zeds = np.cumsum(self.dzf)
+        # Normalise dzf to unit interval.
+        # clipped to 0 and 1 because we pad on the LHS, RHS later
+        # and we need the array to be monotonically increasing
+        zeds /= zeds[-1]
+        zeds = np.clip(zeds, 0, 1)
+        zeds = zeds[0:-1]
+        return zeds
 
     def _extent(self):
         #First calculate slab area:
@@ -193,16 +169,8 @@ class FreeformVFP(Component):
         -------
         interpolator : scipy.interpolate.Interpolator
         """
-        dzf = np.array(self.dzf)
-        zeds = np.cumsum(dzf)
 
-        # Normalise dzf to unit interval.
-        # clipped to 0 and 1 because we pad on the LHS, RHS later
-        # and we need the array to be monotonically increasing
-
-        zeds /= zeds[-1]
-        zeds = np.clip(zeds, 0, 1)
-
+        zeds = self._dzf_to_zeds() 
         vf = self._vff_to_vf()
 
         # do you require zero gradient at either end of the spline?
@@ -374,11 +342,7 @@ class FreeformVFP(Component):
         s[0] = s[1]
 
         # perhaps you'd like to plot the knot locations
-        zeds = np.cumsum(self.dzf)
-
-        zeds /= np.sum(self.dzf)
-        zeds = np.clip(zeds, 0, 1)
-
+        zeds = self._dzf_to_zeds() 
         zed_knots = zeds * float(self._extent()) + offset
 
         if extra:
