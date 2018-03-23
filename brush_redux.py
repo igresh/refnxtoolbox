@@ -46,9 +46,9 @@ class SoftTruncPDF(object):
 class FreeformVFP(Component):
     """
     """
-    def __init__(self, adsorbed_amount, vff, dzf, polymer_sld, solvent, name='',
+    def __init__(self, adsorbed_amount, vff, dzf, polymer_sld, name='',
                  left_slabs=(), right_slabs=(),
-                 interpolator=Pchip, zgrad=True, monotonic_penalty=0,
+                 interpolator=Pchip, zgrad=True,
                  microslab_max_thickness=1):
         """
         Parameters
@@ -56,15 +56,12 @@ class FreeformVFP(Component):
         extent : Parameter or float
             The total extent of the spline region
         vff: sequence of Parameter or float
-            Volume fraction at each of the spline knots, as a fraction of 
-            the volume fraction of the rightmost left slab 
+            Volume fraction at each of the spline knots, as a fraction of
+            the volume fraction of the rightmost left slab
         dzf : sequence of Parameter or float
-            Separation of successive knots, expressed as a fraction of
-            `extent`.
+            Separation of successive knots, will be normalised to a 0-1 scale.
         polymer_sld : SLD or float
             SLD of polymer
-        solvent : SLD or float
-            SLD of solvent
         name : str
             Name of component
         gamma : Parameter
@@ -88,25 +85,20 @@ class FreeformVFP(Component):
         else:
             self.polymer_sld = SLD(polymer_sld)
 
-        if isinstance(solvent, SLD):
-            self.solvent = solvent
-        else:
-            self.solvent = SLD(solvent)
-
         # left and right slabs are other areas where the same polymer can
         # reside
         self.left_slabs = [slab for slab in left_slabs if
                            isinstance(slab, Slab)]
         self.right_slabs = [slab for slab in right_slabs if
                             isinstance(slab, Slab)]
-        
+
         # use the volume fraction of the last left_slab as the initial vf of
-        # the spline, if not left slabs supplied start at vff 1
+        # the spline, if not left slabs supplied start at vf 1
         if len(self.left_slabs):
             self.start_vf = 1 - self.left_slabs[-1].vfsolv.value
         else:
             self.start_vf = 1
-              
+
         # in contrast use a vf = 0 for the last vf of
         # the spline, unless right_slabs is specified
         if len(self.right_slabs):
@@ -141,10 +133,8 @@ class FreeformVFP(Component):
         if len(self.vff) != len(self.dzf):
             raise ValueError("dzf and vs must have same number of entries")
 
-        self.monotonic_penalty = monotonic_penalty
         self.zgrad = zgrad
         self.interpolator = interpolator
-
 
         self.__cached_interpolator = {'zeds': np.array([]),
                                       'vff': np.array([]),
@@ -152,36 +142,38 @@ class FreeformVFP(Component):
                                       'extent': -1}
     def _update_vfs (self):
         # use the volume fraction of the last left_slab as the initial vf of
-        # the spline, if not left slabs supplied start at vff 1
+        # the spline, if not left slabs supplied start at vf 1
         if len(self.left_slabs):
             self.start_vf = 1 - self.left_slabs[-1].vfsolv.value
         else:
             self.start_vf = 1
-              
+
         # in contrast use a vf = 0 for the last vf of
         # the spline, unless right_slabs is specified
         if len(self.right_slabs):
             self.end_vf = 1 - self.right_slabs[0].vfsolv.value
         else:
             self.end_vf = 0
-            
-            
+
+
     def _vff_to_vf(self):
         self._update_vfs()
         return np.cumprod(self.vff) * (self.start_vf-self.end_vf) + self.end_vf
-    
+
+
     def _extent(self):
-        
         #First calculate slab area:
         slab_area = self._slab_area()
-        
+
         difference = self.adsorbed_amount - slab_area
+
+        assert difference > 0 , 'Your slab area has exceeded your adsorbed amount!'
+
         interpolator = self._vfp_interpolator()
-        
 
         return difference/interpolator.integrate(0, 1)
-        
-            
+
+
     def _slab_area(self):
         area = 0
         for slab in self.left_slabs:
@@ -191,7 +183,8 @@ class FreeformVFP(Component):
             _slabs = slab.slabs
             area += _slabs[0, 0] * (1 - _slabs[0, 4])
         return area
-    
+
+
     def _vfp_interpolator(self):
         """
         The spline based volume fraction profile interpolator
@@ -203,16 +196,14 @@ class FreeformVFP(Component):
         dzf = np.array(self.dzf)
         zeds = np.cumsum(dzf)
 
-        # if dzf's sum to more than 1, then normalise to unit interval.
+        # Normalise dzf to unit interval.
         # clipped to 0 and 1 because we pad on the LHS, RHS later
         # and we need the array to be monotonically increasing
-        if zeds[-1] > 1:
-            zeds /= zeds[-1]
-            zeds = np.clip(zeds, 0, 1)
 
+        zeds /= zeds[-1]
+        zeds = np.clip(zeds, 0, 1)
 
         vf = self._vff_to_vf()
-
 
         # do you require zero gradient at either end of the spline?
         if self.zgrad:
@@ -243,8 +234,9 @@ class FreeformVFP(Component):
 
         # TODO make vfp zero for z > self.extent
         interpolator = self.interpolator(zeds, vf)
-        self.__cached_interpolator['interp'] = interpolator
+        #self.__cached_interpolator['interp'] = interpolator
         return interpolator
+
 
     def __call__(self, z):
         """
@@ -263,6 +255,7 @@ class FreeformVFP(Component):
         interpolator = self._vfp_interpolator()
         vfp = interpolator(z / float(self._extent()))
         return vfp
+
 
     def moment(self, moment=1):
         """
@@ -284,22 +277,22 @@ class FreeformVFP(Component):
         area = self.profile_area()
         return val / area
 
+
     @property
     def parameters(self):
         p = Parameters(name=self.name)
-        p.extend([self.adsorbed_amount, self.dzf, self.vff, self.solvent.parameters,
+        p.extend([self.adsorbed_amount, self.dzf, self.vff,
                   self.polymer_sld.parameters])
         p.extend([slab.parameters for slab in self.left_slabs])
         p.extend([slab.parameters for slab in self.right_slabs])
         return p
 
+
     def lnprob(self):
         lnprob = 0
-        # you're trying to enforce monotonicity
 
-        # log-probability for area under profile
-        #lnprob += self.gamma.lnprob(self.profile_area())
         return lnprob
+
 
     def profile_area(self):
         """
@@ -315,6 +308,7 @@ class FreeformVFP(Component):
         area += self._slab_area()
 
         return area
+
 
     @property
     def slabs(self):
@@ -332,6 +326,7 @@ class FreeformVFP(Component):
         slabs[:, 4] = 1 - self(dist)
 
         return slabs
+
 
     def profile(self, extra=False):
         """
@@ -380,9 +375,9 @@ class FreeformVFP(Component):
 
         # perhaps you'd like to plot the knot locations
         zeds = np.cumsum(self.dzf)
-        if np.sum(self.dzf) > 1:
-            zeds /= np.sum(self.dzf)
-            zeds = np.clip(zeds, 0, 1)
+
+        zeds /= np.sum(self.dzf)
+        zeds = np.clip(zeds, 0, 1)
 
         zed_knots = zeds * float(self._extent()) + offset
 
