@@ -44,7 +44,7 @@ class FreeformVFP(Component):
         microslab_max_thickness : float
             Thickness of microslicing of spline for reflectivity calculation.
         """
-        
+
         assert len(vff) + 1 == len(dzf) , 'Length of dzf must be one greater\
                                            than length of vff'
 
@@ -104,9 +104,9 @@ class FreeformVFP(Component):
         self.interpolator = interpolator
 
         self.__cached_interpolator = {'zeds': np.array([]),
-                                      'vff': np.array([]),
+                                      'vf': np.array([]),
                                       'interp': None,
-                                      'extent': -1}
+                                      'adsorbed amount': -1}
     def _update_vfs (self):
         # use the volume fraction of the last left_slab as the initial vf of
         # the spline, if not left slabs supplied start at vf 1
@@ -126,7 +126,7 @@ class FreeformVFP(Component):
     def _vff_to_vf(self):
         self._update_vfs()
         return np.cumprod(self.vff) * (self.start_vf-self.end_vf) + self.end_vf
-    
+
     def _dzf_to_zeds(self):
         zeds = np.cumsum(self.dzf)
         # Normalise dzf to unit interval.
@@ -170,7 +170,7 @@ class FreeformVFP(Component):
         interpolator : scipy.interpolate.Interpolator
         """
 
-        zeds = self._dzf_to_zeds() 
+        zeds = self._dzf_to_zeds()
         vf = self._vff_to_vf()
 
         # do you require zero gradient at either end of the spline?
@@ -186,23 +186,23 @@ class FreeformVFP(Component):
             vf = np.concatenate([[self.start_vf], vf, [self.end_vf]])
 
         # cache the interpolator
-        #cache_zeds = self.__cached_interpolator['zeds']
-        #cache_vf = self.__cached_interpolator['vf']
-        #cache_extent = self.__cached_interpolator['extent']
+        cache_zeds = self.__cached_interpolator['zeds']
+        cache_vf = self.__cached_interpolator['vf']
+        cache_adsamt = self.__cached_interpolator['adsorbed amount']
 
         # you don't need to recreate the interpolator
-        #if (np.array_equal(zeds, cache_zeds) and
-        #        np.array_equal(vf, cache_vf) and
-        #        np.equal(self._extent(), cache_extent)):
-        #    return self.__cached_interpolator['interp']
-        #else:
-        #    self.__cached_interpolator['zeds'] = zeds
-        #    self.__cached_interpolator['vf'] = vf
-        #    self.__cached_interpolator['extent'] = float(self._extent())
+        if (np.array_equal(zeds, cache_zeds) and
+                np.array_equal(vf, cache_vf) and
+                np.equal(self.adsorbed_amount, cache_adsamt)):
+            return self.__cached_interpolator['interp']
+        else:
+            self.__cached_interpolator['zeds'] = zeds
+            self.__cached_interpolator['vf'] = vf
+            self.__cached_interpolator['adsorbed amount'] = float(self.adsorbed_amount)
 
         # TODO make vfp zero for z > self.extent
         interpolator = self.interpolator(zeds, vf)
-        #self.__cached_interpolator['interp'] = interpolator
+        self.__cached_interpolator['interp'] = interpolator
         return interpolator
 
 
@@ -342,7 +342,7 @@ class FreeformVFP(Component):
         s[0] = s[1]
 
         # perhaps you'd like to plot the knot locations
-        zeds = self._dzf_to_zeds() 
+        zeds = self._dzf_to_zeds()
         zed_knots = zeds * float(self._extent()) + offset
 
         if extra:
