@@ -44,9 +44,9 @@ class Brush_SLD(SLD):
             self.dry_filler_sld = SLD(dry_filler_sld)
 
         if isinstance(adsorbed_amount, Parameter):
-            self.adorbed_amount = adsorbed_amount
+            self.adsorbed_amount = adsorbed_amount
         else:
-            self.adorbed_amount = possibly_create_parameter(adsorbed_amount,
+            self.adsorbed_amount = possibly_create_parameter(adsorbed_amount,
                                                             name='adsorbed amount')
 
         if isinstance(dry_thickness, Parameter):
@@ -60,8 +60,9 @@ class Brush_SLD(SLD):
         # TODO impliment imaginary SLD
 
         self._parameters = Parameters(name=name)
-        self._parameters.extend([self.real, self.imag, self.dry_sld,self.dry_filler_sld,
-                                 self.adorbed_amount, self.dry_thickness])
+        self._parameters.extend([self.real, self.imag, self.dry_sld.real,
+                                 self.dry_filler_sld.real,
+                                 self.adsorbed_amount, self.dry_thickness])
 
     def __call__(self, thick=0, rough=0):
         return Slab(thick, self, rough, name=self.name)
@@ -74,7 +75,7 @@ class Brush_SLD(SLD):
     @property
     def real(self):
         return (self.dry_thickness*(self.dry_sld.real.value-self.dry_filler_sld.real.value)
-                +self.adorbed_amount.value*self.dry_filler_sld.real.value)/self.adorbed_amount.value
+                +self.adsorbed_amount.value*self.dry_filler_sld.real.value)/self.adsorbed_amount.value
 
     @property
     def parameters(self):
