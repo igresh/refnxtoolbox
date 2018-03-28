@@ -119,10 +119,12 @@ analytical_profiles/brushes/brush.py'):
     
 
 
-def approx_walltime(nwalkers, ntemps, nsamps, nthin, nparameters, nCPUs, time_per_calc = 0.005):
-    calcs_per_CPU = nwalkers * ntemps * nsamps * nthin * nparameters / nCPUs
+def approx_walltime(nwalkers, ntemps, nsamps, nthin, nparameters, nCPUs,
+                    time_per_calc = 0.005, margin=1.5):
+    # Time approximation is based on estimated scaling - not actual testing...
+    calcs_per_CPU = nparameters**0.8 * (nwalkers * ntemps)**0.8 * (nsamps * nthin) / nCPUs**0.8
     time_per_calc = 0.005
-    time_min = calcs_per_CPU * time_per_calc / 60
+    time_min = 5 + margin * calcs_per_CPU * time_per_calc / 60
     return "%02d:%02d:00" % (time_min/60, time_min%60)
     
 def writeMPI(objective_name, direc, nwalkers, ntemps, nsamps, nthin, init_method = 'prior', buffering=100):
