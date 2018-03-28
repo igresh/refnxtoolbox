@@ -62,7 +62,7 @@ def name():\n\
     
 get_ipython().register_magics(CellWriter)
 
-def package(name, nwalkers, ntemps, nsamps, nthin, nCPUs=8,
+def package(name, nwalkers, ntemps, nsamps, nthin, nCPUs=2,
             vfp_location='/mnt/1D9D9A242359B87C/Git Repos/refnx/examples/\
 analytical_profiles/brushes/brush.py'):
     
