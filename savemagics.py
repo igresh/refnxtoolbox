@@ -199,7 +199,7 @@ def writeShell(name, direc, timeh, nCPUs):
 \n\
 source /home/561/ig8882/venv/refnx-activate\n\
 \n\
-mpirun -np %d python %s_run.py"%(timeh, nCPUs, timeh, name)
+mpirun -np %s python %s_run.py"%(timeh, nCPUs, timeh, name)
 
     filename = direc + name + ".sh"
         
