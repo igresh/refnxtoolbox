@@ -36,12 +36,12 @@ class Brush_SLD(SLD):
         if isinstance(dry_sld, SLD):
             self.dry_sld = dry_sld
         else:
-            self.dry_sld = SLD(dry_sld)
+            self.dry_sld = SLD(dry_sld, name='measured dry')
 
         if isinstance(dry_filler_sld, SLD):
             self.dry_filler_sld = dry_filler_sld
         else:
-            self.dry_filler_sld = SLD(dry_filler_sld)
+            self.dry_filler_sld = SLD(dry_filler_sld, name='dry filler')
 
         if isinstance(adsorbed_amount, Parameter):
             self.adsorbed_amount = adsorbed_amount
@@ -53,7 +53,7 @@ class Brush_SLD(SLD):
             self.dry_thickness = dry_thickness
         else:
             self.dry_thickness = possibly_create_parameter(dry_thickness,
-                                                            name='adsorbed amount')
+                                                            name='dry thickness')
 
         #self.real = Parameter(value, name='%s - sld' % name)
         self.imag = Parameter(0, name='%s - isld' % name)
