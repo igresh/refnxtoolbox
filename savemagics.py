@@ -191,15 +191,15 @@ def writeShell(name, direc, timeh, nCPUs):
 #PBS -P rr87\n\
 #PBS -q normal\n\
 #PBS -l walltime=%s\n\
-#PBS -l mem=8GB\n\
-#PBS -l jobfs=8GB\n\
+#PBS -l mem=2GB\n\
+#PBS -l jobfs=1GB\n\
 #PBS -l ncpus=%d\n\
 #PBS -l software=refnx\n\
 #PBS -l wd\n\
 \n\
 source /home/561/ig8882/venv/refnx-activate\n\
 \n\
-mpirun -np %s python %s_run.py"%(timeh, nCPUs, timeh, name)
+mpirun -np %d python %s_run.py"%(timeh, nCPUs, nCPUs, name)
 
     filename = direc + name + ".sh"
         
