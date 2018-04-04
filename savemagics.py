@@ -166,7 +166,7 @@ with MPIPool() as pool:\n\
 \n\
     if len(maybe_existing_files) > 0:\n\
         existing_file = maybe_existing_files[0]\n\
-        fitter = pickle.load(open(existing_file))\n\
+        fitter = pickle.load(open(existing_file, 'rb'))\n\
         print ('resuming from chain: ' , existing_file)\n\
     else:\n\
         fitter = CurveFitter(objective, nwalkers=nwalkers, ntemps=ntemps)\n\
