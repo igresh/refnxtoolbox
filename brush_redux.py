@@ -19,7 +19,7 @@ class FreeformVFP(Component):
         """
         Parameters
         ----------
-        extent : Parameter or float
+        Adsorbed Amount : Parameter or float
             The total extent of the spline region
         vff: sequence of Parameter or float
             Volume fraction at each of the spline knots, as a fraction of

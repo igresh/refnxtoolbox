@@ -55,15 +55,6 @@ class Brush_SLD(SLD):
             self.dry_thickness = possibly_create_parameter(dry_thickness,
                                                             name='dry thickness')
 
-        #self.real = Parameter(value, name='%s - sld' % name)
-        self.imag = Parameter(0, name='%s - isld' % name)
-        # TODO impliment imaginary SLD
-
-        self._parameters = Parameters(name=name)
-        self._parameters.extend([self.real, self.imag, self.dry_sld.real,
-                                 self.dry_filler_sld.real,
-                                 self.adsorbed_amount, self.dry_thickness])
-
     def __call__(self, thick=0, rough=0):
         return Slab(thick, self, rough, name=self.name)
 
@@ -74,8 +65,15 @@ class Brush_SLD(SLD):
 
     @property
     def real(self):
-        return (self.dry_thickness*(self.dry_sld.real.value-self.dry_filler_sld.real.value)
+        v = (self.dry_thickness.value*(self.dry_sld.real.value-self.dry_filler_sld.real.value)
                 +self.adsorbed_amount.value*self.dry_filler_sld.real.value)/self.adsorbed_amount.value
+        return Parameter(name='%s - imag'%self.name, value=v)
+    @property
+    def imag(self):
+        # Not implemented
+        return Parameter(name='%s - imag'%self.name, value=0)
+        #return (self.dry_thickness*(self.dry_sld.real.value-self.dry_filler_sld.real.value)
+        #        +self.adsorbed_amount.value*self.dry_filler_sld.real.value)/self.adsorbed_amount.value
 
     @property
     def parameters(self):
@@ -83,8 +81,8 @@ class Brush_SLD(SLD):
         :class:`refnx.analysis.Parameters` associated with this component
 
         """
-        self._parameters.name = self.name
+        self._parameters = Parameters(name=self.name)
+        self._parameters.extend([self.dry_sld.real, self.dry_sld.imag,
+                                 self.dry_filler_sld.real, self.dry_filler_sld.imag,
+                                 self.adsorbed_amount, self.dry_thickness])
         return self._parameters
-        # p = Parameters(name=self.name)
-        # p.extend([self.real, self.imag])
-        # return p
