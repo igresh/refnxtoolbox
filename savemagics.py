@@ -62,12 +62,17 @@ def name():\n\
     
 get_ipython().register_magics(CellWriter)
 
-def package(name, nwalkers, ntemps, nsamps, nthin, nCPUs=2,
+def package(name, nwalkers, ntemps, nsamps, nthin, nCPUs=2, useMPI=True,
             vfp_location='/mnt/1D9D9A242359B87C/Git Repos/refnx/examples/\
 analytical_profiles/brushes/brush.py'):
     
     direc = name + '/'    
     objective_file = name + '.py'
+    
+    if nCPUs == 1:
+        if useMPI:
+            print ('You have only requested 1 CPU: Setting useMPI to false')
+        useMPI = False
     
     # Make the directory for the objective, this will be copied to the cluster
     if not os.path.exists(name):
@@ -111,8 +116,9 @@ analytical_profiles/brushes/brush.py'):
     os.chdir('..') # Not an ideal way to do things...
 
     nparameters = len(objective.varying_parameters())
-    
-    writeMPI(name, direc, nwalkers, ntemps, nsamps, nthin)
+
+
+    writeRun(name, direc, nwalkers, ntemps, nsamps, nthin, use_MPI=useMPI)
     walltime = approx_walltime(nwalkers, ntemps, nsamps, nthin, nparameters, nCPUs)
     writeShell(name, direc, walltime, nCPUs)
 
@@ -127,26 +133,28 @@ def approx_walltime(nwalkers, ntemps, nsamps, nthin, nparameters, nCPUs,
     time_min = 5 + margin * calcs_per_CPU * time_per_calc / 60
     return "%02d:%02d:00" % (time_min/60, time_min%60)
     
-def writeMPI(objective_name, direc, nwalkers, ntemps, nsamps, nthin, init_method = 'prior', buffering=100):
+def writeRun(objective_name, direc, nwalkers, ntemps, nsamps, nthin, use_MPI=True, 
+             init_method = 'prior', buffering=100):
     """
     """
 
-    code = "\
+    code1 = "\
 import sys\n\
 import os\n\
 import glob\n\
 import os\n\
 import pickle\n\
 from refnx.analysis import CurveFitter, load_chain\n\
-from schwimmbad import MPIPool\n\
 from %s import *\n\
-\
 \
 dir_path = os.path.dirname(os.path.realpath(__file__))\n\
 os.chdir(dir_path)\
 \n\
-objective = setup()\n\
-\n\
+objective = setup()\n"%(objective_name)
+
+#If using MPI
+    code2a = "\n\
+from schwimmbad import MPIPool\n\
 with MPIPool() as pool:\n\
     if not pool.is_master():\n\
         pool.wait()\n\
@@ -178,12 +186,46 @@ with MPIPool() as pool:\n\
         fitter.sample(1, nthin=nthin, pool=pool)\n\
         print(\"%%d/%%d\"%%(i+1,nsamps))\n\
         pickle.dump(fitter, open(filename, 'wb'))\
-"%(objective_name, nwalkers, ntemps, nthin, nsamps, objective_name, init_method)
+"%(nwalkers, ntemps, nthin, nsamps, objective_name, init_method)
+
+#If not using MPI
+    code2b = "\
+nwalkers=%d\n\
+ntemps=%d\n\
+nthin=%d\n\
+nsamps=%d\n\
+\n\
+filename = ('%s' + '_samplechain_' + \n\
+            str(nwalkers) + 'walkers_' + \n\
+            str(ntemps) + 'temps_' + \n\
+            str(nthin) + 'thinned.pkl')\n\
+\n\
+maybe_existing_files = glob.glob(filename)\
+\n\
+if len(maybe_existing_files) > 0:\n\
+    existing_file = maybe_existing_files[0]\n\
+    fitter = pickle.load(open(existing_file, 'rb'))\n\
+    print ('resuming from chain: ' , existing_file)\n\
+else:\n\
+    fitter = CurveFitter(objective, nwalkers=nwalkers, ntemps=ntemps)\n\
+    fitter.initialise('%s')\n\
+    print ('Created new fitter' , filename)\n\
+\n\
+\n\
+for i in range(nsamps):\n\
+    fitter.sample(1, nthin=nthin)\n\
+    print(\"%%d/%%d\"%%(i+1,nsamps))\n\
+    pickle.dump(fitter, open(filename, 'wb'))\
+"%(nwalkers, ntemps, nthin, nsamps, objective_name, init_method)
         
     filename = direc + objective_name + "_run.py"
         
     with open(filename, 'w') as fh: # Save the cell + metadata as a .py file
-        fh.write(code)
+        fh.write(code1)
+        if use_MPI:
+            fh.write(code2a)
+        else:
+            fh.write(code2b)
 
 def writeShell(name, direc, timeh, nCPUs):
     script = "\
