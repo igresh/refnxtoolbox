@@ -411,7 +411,7 @@ class Brush_SLD(SLD):
     def real(self):
         v = (self.dry_thickness.value*(self.dry_sld.real.value-self.dry_filler_sld.real.value)
                 +self.adsorbed_amount.value*self.dry_filler_sld.real.value)/self.adsorbed_amount.value
-        return Parameter(name='%s - imag'%self.name, value=v)
+        return Parameter(name='%s - real'%self.name, value=v)
     @property
     def imag(self):
         # Not implemented
