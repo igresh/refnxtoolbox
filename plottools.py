@@ -8,10 +8,7 @@ import sys
 import re
 import array
 
-sys.path.append("/mnt/1D9D9A242359B87C/Git Repos/refnx/examples/analytical_profiles/brushes/")
-sys.path.append("/Users/Isaac/Documents/GitRepos/refnx/examples/analytical_profiles/brushes/")
-
-import brush
+import brush_redux
 from refnx._lib import possibly_open_file
 from refnx.analysis import process_chain
 
@@ -123,7 +120,7 @@ def plot_refl(objective, axis, colour = None, alpha = 1, limits = None, plot_lin
         axis.plot(data.x, model(data.x, x_err=data.x_err)*ymod, color=colour, alpha=alpha)
         
     if plot_data:
-        axis.errorbar(data.x, data.y*ymod, yerr=data.y_err*ymod, marker='.', color=colour, alpha=alpha)
+        axis.errorbar(data.x, data.y*ymod, yerr=data.y_err*ymod, fmt='none', color=colour, alpha=alpha)
 
     if limits is not None:
         assert len(limits) == 4, "Must supply limits in format [xlow, xhigh, ylow, yhigh]"

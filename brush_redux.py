@@ -138,16 +138,19 @@ class FreeformVFP(Component):
         return zeds
 
     def _extent(self):
-        #First calculate slab area:
-        slab_area = self._slab_area()
-
+        # First calculate slab area:
+        slab_area = self._slab_area()        
         difference = self.adsorbed_amount - slab_area
 
         assert difference > 0 , 'Your slab area has exceeded your adsorbed amount!'
 
         interpolator = self._vfp_interpolator()
-
-        return difference/interpolator.integrate(0, 1)
+        extent = difference/interpolator.integrate(0, 1)
+        assert extent.value < 15000 , 'The extent required to conserve the adsorbed amount\
+is very large (extent=%d) for the current parameter combination. You should raise the\
+ lower limits on your first 30\% of vffs'%extent.value
+            
+        return extent
 
 
     def _slab_area(self):
@@ -334,7 +337,11 @@ class FreeformVFP(Component):
 
         # now calculate the VFP.
         total_thickness = np.sum(s.slabs[:, 0])
-        zed = np.linspace(0, total_thickness, total_thickness + 1)
+        if total_thickness < 500:
+            num_zed_points = total_thickness
+        else:
+            num_zed_points = 500
+        zed = np.linspace(0, total_thickness, num_zed_points)
         # SLD profile puts a very small roughness on the interfaces with zero
         # roughness.
         zed[0] = 0.01
