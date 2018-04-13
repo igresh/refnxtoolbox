@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+import sys 
 
 from scipy.interpolate import PchipInterpolator as Pchip
 from scipy.integrate import simps
@@ -146,9 +147,6 @@ class FreeformVFP(Component):
 
         interpolator = self._vfp_interpolator()
         extent = difference/interpolator.integrate(0, 1)
-        assert extent.value < 15000 , 'The extent required to conserve the adsorbed amount\
-is very large (extent=%d) for the current parameter combination. You should raise the\
- lower limits on your first 30%% of vffs'%extent.value
             
         return extent
 
@@ -283,8 +281,18 @@ is very large (extent=%d) for the current parameter combination. You should rais
 
     @property
     def slabs(self):
-        num_slabs = np.ceil(float(self._extent()) / self.microslab_max_thickness)
-        slab_thick = float(self._extent() / num_slabs)
+        
+        cutoff = 10000
+        if self._extent() > cutoff:
+            print ('extent > %d, perfoming refl. calc on first %dA.'%
+                   (cutoff, cutoff), file=sys.stderr)
+            slab_extent = cutoff
+        else:
+            slab_extent = self._extent()
+
+
+        num_slabs = np.ceil(float(slab_extent) / self.microslab_max_thickness)
+        slab_thick = float(slab_extent / num_slabs)
         slabs = np.zeros((int(num_slabs), 5))
         slabs[:, 0] = slab_thick
 
@@ -292,6 +300,9 @@ is very large (extent=%d) for the current parameter combination. You should rais
         slabs[-1:, 3] = 0.5
 
         dist = np.cumsum(slabs[..., 0]) - 0.5 * slab_thick
+        
+
+        
         slabs[:, 1] = self.polymer_sld.real.value
         slabs[:, 2] = self.polymer_sld.imag.value
         slabs[:, 4] = 1 - self(dist)
