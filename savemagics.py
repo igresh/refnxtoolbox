@@ -122,17 +122,22 @@ analytical_profiles/brushes/brush.py'):
     walltime = approx_walltime(nwalkers, ntemps, nsamps, nthin, nparameters, nCPUs)
     writeShell(name, direc, walltime, nCPUs)
 
-    
-
 
 def approx_walltime(nwalkers, ntemps, nsamps, nthin, nparameters, nCPUs,
                     time_per_calc = 0.005, margin=1.5):
     # Time approximation is based on estimated scaling - not actual testing...
     calcs_per_CPU = nparameters**0.8 * (nwalkers * ntemps)**0.8 * (nsamps * nthin) / nCPUs**0.8
     time_per_calc = 0.005
-    time_min = 5 + margin * calcs_per_CPU * time_per_calc / 60
-    return "%02d:%02d:00" % (time_min/60, time_min%60)
-    
+    time = 5 + margin * calcs_per_CPU * time_per_calc / 60
+    time_hour = time/60
+    time_min  = time%60
+    if time_hour < 48: # Right time for Raijin 
+        return "%02d:%02d:00" % (time_hour, time_min)
+    else: # To long for Raijin
+        print ('WARNING: Setting runtime to 47:55 (max). Your run may be cut short')
+        return "%02d:%02d:00" % (47, 55)
+
+
 def writeRun(objective_name, direc, nwalkers, ntemps, nsamps, nthin, use_MPI=True, 
              init_method = 'prior', buffering=100):
     """
@@ -188,7 +193,7 @@ with MPIPool() as pool:\n\
         pickle.dump(fitter, open(filename, 'wb'))\
 "%(nwalkers, ntemps, nthin, nsamps, objective_name, init_method)
 
-#If not using MPI
+#If not using MPI (1 CPU)
     code2b = "\
 nwalkers=%d\n\
 ntemps=%d\n\
@@ -213,8 +218,8 @@ else:\n\
 \n\
 \n\
 for i in range(nsamps):\n\
-    fitter.sample(1, nthin=nthin)\n\
-    print(\"%%d/%%d\"%%(i+1,nsamps))\n\
+    print(\"%%d/%%d\"%%(i,nsamps))\n\
+    fitter.sample(1, nthin=nthin, pool=1)\n\
     pickle.dump(fitter, open(filename, 'wb'))\
 "%(nwalkers, ntemps, nthin, nsamps, objective_name, init_method)
         
@@ -228,7 +233,7 @@ for i in range(nsamps):\n\
             fh.write(code2b)
 
 def writeShell(name, direc, timeh, nCPUs):
-    script = "\
+    script1 = "\
 #!/bin/bash\n\
 #PBS -P rr87\n\
 #PBS -q normal\n\
@@ -241,9 +246,16 @@ def writeShell(name, direc, timeh, nCPUs):
 \n\
 source /home/561/ig8882/venv/refnx-activate\n\
 \n\
-mpirun -np %d python %s_run.py"%(timeh, nCPUs, nCPUs, name)
+"%(timeh, nCPUs)
+
+    script2a = "mpirun -np %d python %s_run.py"%(nCPUs, name)
+    script2b = "python %s_run.py"%(name)
 
     filename = direc + name + ".sh"
         
     with open(filename, 'w') as fh: # Save the cell + metadata as a .py file
-        fh.write(script)
+        fh.write(script1)
+        if nCPUs == 1:
+            fh.write(script2b)
+        else:
+            fh.write(script2a)

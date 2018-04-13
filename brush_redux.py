@@ -148,7 +148,7 @@ class FreeformVFP(Component):
         extent = difference/interpolator.integrate(0, 1)
         assert extent.value < 15000 , 'The extent required to conserve the adsorbed amount\
 is very large (extent=%d) for the current parameter combination. You should raise the\
- lower limits on your first 30\% of vffs'%extent.value
+ lower limits on your first 30%% of vffs'%extent.value
             
         return extent
 
