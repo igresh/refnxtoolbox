@@ -475,6 +475,7 @@ def plot_cluster_profiles(db, objective, samples, lnprob = None):
 
 ### OLD BELOW ###
 
+
 def process_samples(objective, pvecs, vfp_location=3):
     """
     objective: objective
@@ -508,6 +509,8 @@ def process_samples(objective, pvecs, vfp_location=3):
     best_moment = None
     best_lnlike = None
     best_lnprior = None
+    
+    max_z = 0 
 
     counter = 0
     for pvec in pvecs:
@@ -521,7 +524,9 @@ def process_samples(objective, pvecs, vfp_location=3):
             areas.append(vfp.adsorbed_amount.value)
             ismono.append(is_monotonic(objective))
 
-            z, phi, zk, phik = vfp.profile(extra=True, zpoints=250)
+            z, phi, zk, phik = vfp.profile(extra=True)#, zpoints=250)
+            if np.max(z) > max_z:
+                max_z = np.max(z)
             vfp_profiles.append([z, phi])
             vfp_knots.append([zk, phik])
 
@@ -550,6 +555,15 @@ def process_samples(objective, pvecs, vfp_location=3):
             best_ref = ref_profile
             best_lnprob = objective.lnprob()
 
+    # FIXME: At some point this should go into a seperate function and also be applied to the SLD axes
+    numpoints = 500
+    z_axis_master = np.linspace(0, max_z, numpoints)
+    y_axes_array = np.zeros([len(vfp_profiles), numpoints])
+
+    for index, [x_axis, y_axis] in enumerate(vfp_profiles):
+        y_axes_array[index, :] = np.interp(z_axis_master, x_axis, y_axis)
+
+    vfp_profiles = y_axes_array
 
     moments = np.reshape(np.array(moments), (counter, num_structs))
     areas = np.reshape(areas, (counter, num_structs))
