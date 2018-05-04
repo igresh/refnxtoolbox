@@ -754,7 +754,7 @@ def graph_plot(objective, pvecs=None, vfp_location=None, plot_knots=False,
     return fig, fig.gca()
 
 
-def prob_color(lnprob=None, lnprob_bounds=None, col_mod=1):
+def prob_color(lnprob=None, lnprob_bounds=None, col_mod=0):
     """
     lnprob: probability within lnprob_bounds
     lnprob_bounds: upper and lower bounds of lnprobaility
@@ -771,7 +771,7 @@ def prob_color(lnprob=None, lnprob_bounds=None, col_mod=1):
     elif x < 0.01:
         x = 0.01
 
-    col_mod = (col_mod-1)*0.4 + 1
+    col_mod = (col_mod)*0.3 + 1
     col = np.array(plt.cm.plasma(x))*col_mod
     col[col>1] = 1
     col[col<0] = 0
