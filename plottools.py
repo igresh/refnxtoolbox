@@ -648,7 +648,7 @@ def _report_graph_plot (report, plot_knots=False, fig=None, ax=None, lnprob_limi
         leg_patches = [mpatches.Patch(color=(0,0,0,0), label='lnprob:'),
                    mpatches.Patch(color=prob_color(lnprob_limits[0], lnprob_limits, 0), label='   %d'%lnprob_limits[0]),
                    mpatches.Patch(color=prob_color(lnprob_limits[1], lnprob_limits, 0), label='   %d'%lnprob_limits[1])]
-        ax2.legend(handles=leg_patches, fontsize='x-small')
+        ax2.legend(handles=leg_patches, fontsize='x-small', frameon=False)
 
     return fig
         
@@ -700,11 +700,11 @@ def _objective_graph_plot (objective, pvecs=None, vfp_location=None, plot_knots=
                  color=c, alpha=al)
   
     if lnprob_limits is not None:
-        leg_patches = [mpatches.Patch(color=(0,0,0,0), label='lnprob:'),
-                       mpatches.Patch(color=prob_color(lnprob_limits[0], lnprob_limits, 0), label='   %d'%lnprob_limits[0]),
-                       mpatches.Patch(color=prob_color(lnprob_limits[1], lnprob_limits, 0), label='   %d'%lnprob_limits[1])]
+         leg_patches = [mpatches.Patch(color=(0, 0, 0, 0), label='lnprob:'),
+                        mpatches.Patch(color=prob_color(lnprob_limits[0], lnprob_limits, 0), label='   %d'%lnprob_limits[0]),
+                        mpatches.Patch(color=prob_color(lnprob_limits[1], lnprob_limits, 0), label='   %d'%lnprob_limits[1])]
 
-        ax2.legend(handles=leg_patches, fontsize='x-small')
+         ax2.legend(handles=leg_patches, fontsize='x-small', frameon=False)
     
     return fig
 
