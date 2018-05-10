@@ -92,11 +92,23 @@ def plot_burnplot(objective, chain, burn=None,
             axis[1].hist(chain[cindex, :, pindex], bins=12, density=True,
                          histtype='step', alpha=alpha, color=col)
             mod_cindex = thin_factor*cindex
+            try:
+                axis[0].plot([mod_cindex, mod_cindex],
+                             [param.bounds.lb, param.bounds.ub],
+                             linestyle='dashed', color=col, alpha=alpha)
+            except AttributeError:
+                y_limits = axis[0].get_ylim()
+                axis[0].plot([mod_cindex, mod_cindex],
+                             [-1e8, 1e8],
+                             linestyle='dashed', color=col, alpha=alpha)
+                axis[0].set_ylim(y_limits)
+        try:
             axis[0].plot([mod_cindex, mod_cindex],
                          [param.bounds.lb, param.bounds.ub],
                          linestyle='dashed', color=col, alpha=alpha)
-
-        axis[0].set_ybound(param.bounds.lb, param.bounds.ub)
+            axis[0].set_ybound(param.bounds.lb, param.bounds.ub)
+        except AttributeError:  # Probably a PDF,so no lower and upper bounds
+            print('Assuming %s is an unbounded PDF' % param.name)
         axis[0].set_xbound(0, (n_samps-1)*thin_factor)
 
     fig.tight_layout()
@@ -167,9 +179,12 @@ def plot_walker_trace(parameter, samples, temps=[0], tcolors=['k'],
         leg.append(mpatches.Patch(color=c, label=('T %d' % t)))
         for samp in samples[:, t].T:
             axis.plot(steps, samp, color=c, alpha=0.2)
+    try:
+        axis.plot(steps, np.ones(steps.shape) * parameter.bounds.lb, color='b')
+        axis.plot(steps, np.ones(steps.shape) * parameter.bounds.ub, color='b')
+    except AttributeError:  # Probably a PDF,so no lower and upper bounds
+        print('Assuming %s is an unbounded PDF'%parameter.name)
 
-    axis.plot(steps, np.ones(steps.shape) * parameter.bounds.lb, color='b')
-    axis.plot(steps, np.ones(steps.shape) * parameter.bounds.ub, color='b')
     axis.set_xlabel('step number')
     axis.set_ylabel('parameter value')
 
@@ -700,11 +715,11 @@ def _objective_graph_plot (objective, pvecs=None, vfp_location=None, plot_knots=
                  color=c, alpha=al)
   
     if lnprob_limits is not None:
-         leg_patches = [mpatches.Patch(color=(0, 0, 0, 0), label='lnprob:'),
-                        mpatches.Patch(color=prob_color(lnprob_limits[0], lnprob_limits, 0), label='   %d'%lnprob_limits[0]),
-                        mpatches.Patch(color=prob_color(lnprob_limits[1], lnprob_limits, 0), label='   %d'%lnprob_limits[1])]
+        leg_patches = [mpatches.Patch(color=(0, 0, 0, 0), label='lnprob:'),
+                       mpatches.Patch(color=prob_color(lnprob_limits[0], lnprob_limits, 0), label='   %d'%lnprob_limits[0]),
+                       mpatches.Patch(color=prob_color(lnprob_limits[1], lnprob_limits, 0), label='   %d'%lnprob_limits[1])]
 
-         ax2.legend(handles=leg_patches, fontsize='x-small', frameon=False)
+        ax2.legend(handles=leg_patches, fontsize='x-small', frameon=False)
     
     return fig
 
