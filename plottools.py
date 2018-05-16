@@ -7,7 +7,8 @@ import refnx
 
 
 def plot_burnplot(objective, chain, burn=None,
-                  number_histograms=15, thin_factor=1):
+                  number_histograms=15, thin_factor=1, pt_colgen=plt.cm.Blues,
+                  params_to_plot=None, plot_meanline=True, legend=False):
     """
     Constructs plot that enables user to determine if ensemble walkers have
     reached their equilibrium position.
@@ -43,8 +44,8 @@ def plot_burnplot(objective, chain, burn=None,
         n_walkers = chain.shape[2]
         n_params = chain.shape[3]
         ptchain = chain
-        temps = np.flipud(np.linspace(0, ptchain.shape[0]-1, 5).astype(int))
-        colours = plt.cm.Blues(temps/np.max(temps))
+        temps = np.flipud(np.linspace(0, n_temps-1, 5).astype(int))
+        colours = pt_colgen(temps/np.max(temps))
         chain = chain[:, 0]  # Only use lowest temperature
 
     else:  # No parallel tempering
@@ -56,63 +57,79 @@ def plot_burnplot(objective, chain, burn=None,
         ptchain = np.reshape(np.array([chain]),
                              [n_samps, n_temps, n_walkers, n_params])
 
+    if params_to_plot == None:
+        param_index = range(n_params)
+    else:
+        param_index = params_to_plot
+        n_params = len(params_to_plot)
+
     num_subplot_rows = int(n_params)
-    fig, ax = plt.subplots(num_subplot_rows, 2)
-    fig.set_size_inches(7, 3*num_subplot_rows)
+
+    if number_histograms is not None:
+        fig, ax = plt.subplots(num_subplot_rows, 2)
+        fig.set_size_inches(7, 3*num_subplot_rows)
+
+        chain_index = np.linspace(int(0.05*n_samps), n_samps-1,
+                                  number_histograms).astype(int)
+        alphas = 0.09 + 0.9*(chain_index -chain_index[0])/float(chain_index[-1] - chain_index[0])
+
+        if burn is None:            # If burn is not supplied then
+            burn = chain_index[-1]  # do not plot any as red
+    else:
+        fig, ax = plt.subplots(num_subplot_rows, 1, sharex=True)
+        fig.set_size_inches(3.5, 3*num_subplot_rows)
+        ax = np.atleast_2d(ax).T
     fig.set_dpi(200)
-
-    chain_index = np.linspace(int(0.05*n_samps), n_samps-1,
-                              number_histograms).astype(int)
-    param_index = range(n_params)
-    alphas = 0.09 + 0.9*(chain_index - chain_index[0])/float(chain_index[-1] - chain_index[0])
-
-    if burn is None:            # If burn is not supplied then
-        burn = chain_index[-1]  # do not plot any as red
 
     for pindex, axis in zip(param_index, ax):
 
         param = objective.varying_parameters()[pindex]
 
         plot_walker_trace(param, ptchain[:, :, :, pindex], axis=axis[0],
-                          temps=temps, tcolors=colours, thin_factor=thin_factor)
+                          temps=temps, tcolors=colours,
+                          thin_factor=thin_factor, plot_meanline=plot_meanline,
+                          legend=legend)
 
         axis[0].set_title(param.name + ' - value trace')
-        axis[0].ticklabel_format(axis='y', style='sci', scilimits=(-2, 2))
-        axis[1].set_title(param.name + ' - PDF')
-        axis[1].set_xlabel('parameter value')
-        axis[1].ticklabel_format(axis='both', style='sci', scilimits=(-2, 2))
-        axis[1].set_ylabel('probability density')
+        axis[0].ticklabel_format(axis='both', style='sci', scilimits=(-2, 3))
+        axis[0].set_xlabel('step number')
+        axis[0].set_ylabel(param.nameco)
 
-        for cindex, alpha in zip(chain_index, alphas):
-            if cindex < burn:
-                col = 'k'
-            else:
-                col = 'r'
+        if number_histograms is not None:
 
-            axis[1].hist(chain[cindex, :, pindex], bins=12, density=True,
-                         histtype='step', alpha=alpha, color=col)
-            mod_cindex = thin_factor*cindex
-            try:
-                axis[0].plot([mod_cindex, mod_cindex],
-                             [param.bounds.lb, param.bounds.ub],
-                             linestyle='dashed', color=col, alpha=alpha)
-            except AttributeError:
-                y_limits = axis[0].get_ylim()
-                axis[0].plot([mod_cindex, mod_cindex],
-                             [-1e8, 1e8],
-                             linestyle='dashed', color=col, alpha=alpha)
-                axis[0].set_ylim(y_limits)
+            axis[1].set_title(param.name + ' - PDF')
+            axis[1].set_xlabel('parameter value')
+            axis[1].ticklabel_format(axis='both', style='sci', scilimits=(-2, 2))
+            axis[1].set_ylabel('probability density')
+
+            for cindex, alpha in zip(chain_index, alphas):
+                if cindex < burn:
+                    col = 'k'
+                else:
+                    col = 'r'
+    
+                axis[1].hist(chain[cindex, :, pindex], bins=12, density=True,
+                             histtype='step', alpha=alpha, color=col)
+                mod_cindex = thin_factor*cindex
+                try:
+                    axis[0].plot([mod_cindex, mod_cindex],
+                                 [param.bounds.lb, param.bounds.ub],
+                                 linestyle='dashed', color=col, alpha=alpha)
+                except AttributeError: #probably a PDF
+                    y_limits = axis[0].get_ylim()
+                    axis[0].plot([mod_cindex, mod_cindex],
+                                 [-1e8, 1e8],
+                                 linestyle='dashed', color=col, alpha=alpha)
+                    axis[0].set_ylim(y_limits)
         try:
-            axis[0].plot([mod_cindex, mod_cindex],
-                         [param.bounds.lb, param.bounds.ub],
-                         linestyle='dashed', color=col, alpha=alpha)
             axis[0].set_ybound(param.bounds.lb, param.bounds.ub)
         except AttributeError:  # Probably a PDF,so no lower and upper bounds
             print('Assuming %s is an unbounded PDF' % param.name)
+
         axis[0].set_xbound(0, (n_samps-1)*thin_factor)
 
     fig.tight_layout()
-    return fig, fig.gca()
+    return fig, fig.axes
 
 
 def plot_lnprob_distribution(objective, chain, burn=0, axis=None, colour='k'):
@@ -145,7 +162,8 @@ def plot_lnprob_distribution(objective, chain, burn=0, axis=None, colour='k'):
 
 
 def plot_walker_trace(parameter, samples, temps=[0], tcolors=['k'],
-                      thin_factor=1, axis=None, legend=False):
+                      thin_factor=1, axis=None, legend=False,
+                      plot_meanline=True):
     """
     parameters:
     -----------
@@ -185,12 +203,12 @@ def plot_walker_trace(parameter, samples, temps=[0], tcolors=['k'],
     except AttributeError:  # Probably a PDF,so no lower and upper bounds
         print('Assuming %s is an unbounded PDF'%parameter.name)
 
-    axis.set_xlabel('step number')
-    axis.set_ylabel('parameter value')
+    if plot_meanline:
+        axis.plot(steps, np.mean(samples[:, 0, :], axis=1), color='k')
 
     if legend:
         leg.reverse()
-        axis.legend(handles=leg, loc='lower center', ncol=5)
+        axis.legend(handles=leg, loc='lower center', ncol=5, fontsize='xx-small')
 
 
 def plot_quantile_profile(x_axes, y_axes, axis=None, quantiles=[68, 95, 99.8],
@@ -735,11 +753,13 @@ def prob_color(lnprob=None, lnprob_bounds=None, col_mod=0):
 
     x = (lnprob-lnprob_bounds[0])/(lnprob_bounds[1]-lnprob_bounds[0])
 
-
     if x > 0.99:
         x = 0.99
     elif x < 0.01:
         x = 0.01
+
+    x = (x*0.8 + 0.1)
+
 
     col_mod = (col_mod)*0.3 + 1
     col = np.array(plt.cm.plasma(x))*col_mod
