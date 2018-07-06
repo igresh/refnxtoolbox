@@ -107,7 +107,7 @@ def plot_burnplot(objective, chain, burn=None,
                     col = 'k'
                 else:
                     col = 'r'
-    
+
                 axis[1].hist(chain[cindex, :, pindex], bins=12, density=True,
                              histtype='step', alpha=alpha, color=col)
                 mod_cindex = thin_factor*cindex
@@ -563,10 +563,10 @@ def hist_plot(report, show_prior=False):
         moment = np.reshape(moment, (-1))
         area = np.reshape(area, (-1))
         norm_scales = np.reshape(norm_scales, (-1))
-    
+
         ax1.hist(moment, density=True, weights=norm_scales, color='k', histtype='step')
         ax2.hist(area, density=True, weights=norm_scales, color='k', histtype='step')
-        
+
         ax1.set_ylabel('Normalised frequency')
         ax1.set_xlabel('Location of 1st Moment')
         ax2.set_xlabel('VFP Area (true dry layer thickness)')
@@ -619,7 +619,7 @@ def graph_plot(objective=None, pvecs=None, report=None, vfp_location=None, plot_
         List containing lower and upper limits of the lnprob for the system.
         If provided will set the colour of profiles based on their probability.
     """
-    
+
 
 
     if report is not None:
@@ -629,7 +629,7 @@ def graph_plot(objective=None, pvecs=None, report=None, vfp_location=None, plot_
     if objective is not None:
         fig = _objective_graph_plot (objective=objective, pvecs=pvecs, vfp_location=vfp_location,
                                 plot_knots=plot_knots, fig=fig, ax=ax, lnprob_limits=lnprob_limits)
-    
+
 
     fig.tight_layout()
     fig.set_dpi(200)
@@ -637,13 +637,13 @@ def graph_plot(objective=None, pvecs=None, report=None, vfp_location=None, plot_
     return fig, fig.gca()
 
 def _report_graph_plot (report, plot_knots=False, fig=None, ax=None, lnprob_limits='auto'):
-    
+
     try:
         vfps = report['vfp - profiles']
         vfp_exists = True
     except KeyError:
         vfp_exists = False
-        
+
     slds = report['sld - profiles']
     refs = report['refl - profiles']
     data = report['refl - data']
@@ -684,15 +684,15 @@ def _report_graph_plot (report, plot_knots=False, fig=None, ax=None, lnprob_limi
         ax2.legend(handles=leg_patches, fontsize='x-small', frameon=False)
 
     return fig
-        
-    
+
+
 
 def _objective_graph_plot (objective, pvecs=None, vfp_location=None, plot_knots=False,
                fig=None, ax=None, lnprob_limits=None):
     """
     graph plot if report objective is provided instead of report
     """
-    
+
     if vfp_location is None:
         fig, [ax2, ax3] = CreateAxes (fig, ax, num_plots=2)
     else:
@@ -731,14 +731,14 @@ def _objective_graph_plot (objective, pvecs=None, vfp_location=None, plot_knots=
         c = prob_color(objective.lnprob(), lnprob_limits, 0)
         ax3.plot(objective.data.x, objective.model(objective.data.x, x_err=objective.data.x_err),
                  color=c, alpha=al)
-  
+
     if lnprob_limits is not None:
         leg_patches = [mpatches.Patch(color=(0, 0, 0, 0), label='lnprob:'),
                        mpatches.Patch(color=prob_color(lnprob_limits[0], lnprob_limits, 0), label='   %d'%lnprob_limits[0]),
                        mpatches.Patch(color=prob_color(lnprob_limits[1], lnprob_limits, 0), label='   %d'%lnprob_limits[1])]
 
         ax2.legend(handles=leg_patches, fontsize='x-small', frameon=False)
-    
+
     return fig
 
 
