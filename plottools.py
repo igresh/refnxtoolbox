@@ -271,6 +271,7 @@ def plot_quantile_profile(x_axes, y_axes, axis=None, quantiles=[68, 95, 99.8],
 
 def plot_corner(objective, samples):
     labels = []
+    
     for i in flatten(objective.parameters.varying_parameters()):
         labels.append(i.name)
 

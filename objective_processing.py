@@ -6,11 +6,13 @@ import matplotlib
 import os
 
 
-def graph_plot(report, refl_spacing=10, colors=None):
+def graph_plot(report, refl_spacing=10, colors=None, refl_mode='log'):
     """
     colors - Either a color recognised by matplotlib or a color map recognised by
     matplotlib.
+    refl_mode: 'log or rq4, changes y axis plotting for refl plot
     """
+
     vfps = report.get_vfp_profiles()
     slds = report.get_sld_profiles()
     refls = report.get_refl_profiles()
@@ -25,6 +27,7 @@ def graph_plot(report, refl_spacing=10, colors=None):
     rect = np.array([0.4,1,0.58,0.09])
 
     offset = 1
+
 
     if colors is None:
         colors = ['autumn', 'winter', 'cool']
@@ -42,9 +45,13 @@ def graph_plot(report, refl_spacing=10, colors=None):
             ypos = rect[1] + 0.5*rect[3] -0.005
             xpos1 = rect[0]
             xpos2 = rect[0]+rect[2]
-            ax1_I.text(xpos1, ypos, '%0.0d'%lnprob_limits[0], horizontalalignment='left',
+
+            l_left = '%0.0f'%lnprob_limits[0]
+            l_right = '%0.0f'%lnprob_limits[1]
+
+            ax1_I.text(xpos1, ypos, l_left, horizontalalignment='left',
                        verticalalignment='center', transform=ax1.transAxes)
-            ax1_I.text(xpos2, ypos, '%0.0d'%lnprob_limits[1], horizontalalignment='right',
+            ax1_I.text(xpos2, ypos, l_right, horizontalalignment='right',
                        verticalalignment='center', transform=ax1.transAxes)
 
         except ValueError: # Otherwise flat colours are used
@@ -66,11 +73,16 @@ def graph_plot(report, refl_spacing=10, colors=None):
                 c = prob_color(lnp, lnprob_limits, col_map=col)
                 ax2.plot(z, sld, color=c, linestyle=ls, alpha=alpha)
 
-        ax3.errorbar(refl['data Q'], refl['data R']*offset,
-                     yerr=refl['data R err']*offset, fmt=',', color='k')
+        if refl_mode == 'rq4':
+            scale = offset*refl['data Q']**4
+        else:
+            scale = offset
+
+        ax3.errorbar(refl['data Q'], refl['data R']*scale,
+                     yerr=refl['data R err']*scale, fmt=',', color='k')
         for R, lnp in zip(refl['R'], obj_lnprobs):
             c = prob_color(lnp, lnprob_limits, col_map=col)
-            ax3.plot(refl['Q'], R*offset, color=c, alpha=alpha)
+            ax3.plot(refl['Q'], R*scale, color=c, alpha=alpha)
 
         offset /= refl_spacing
 
@@ -345,17 +357,18 @@ class structure_report (object):
         if self.vfp_location is None:
             self.vfp_location = find_vfp(structure)
 
-        vfp = structure[self.vfp_location]
-        self.moments.append(vfp.moment())
-        self.areas.append(vfp.adsorbed_amount.value)
-        self.ismono.append(is_monotonic(vfp))
+        if self.vfp_location is not None:
+            vfp = structure[self.vfp_location]
+            self.moments.append(vfp.moment())
+            self.areas.append(vfp.adsorbed_amount.value)
+            self.ismono.append(is_monotonic(vfp))
 
-        z, phi, zk, phik = vfp.profile(extra=True)
+            z, phi, zk, phik = vfp.profile(extra=True)
 
-        self.vfp_z.append(z)
-        self.vfp_phi.append(phi)
-        self.vfp_zk.append(zk)
-        self.vfp_phik.append(phik)
+            self.vfp_z.append(z)
+            self.vfp_phi.append(phi)
+            self.vfp_zk.append(zk)
+            self.vfp_phik.append(phik)
 
         z, sld = structure.sld_profile()
 
