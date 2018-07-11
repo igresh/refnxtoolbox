@@ -6,10 +6,23 @@ import matplotlib
 import os
 
 
-def graph_plot(report, refl_spacing=10, colors=None, refl_mode='log'):
+def plot_reports(reports, refl_spacing=10, refl_mode='log',
+                 colors=['r', 'g', 'b']):
+    fig, ax = plt.subplots(1, 3)
+    fig.set_size_inches(8, 2.5)
+    fig.set_dpi(200)
+
+    offset = 1
+    for report, c in zip(reports, colors):
+        offset = _graph_plot(report, fig, ax, offset=offset, colors=c,
+                             refl_spacing=refl_spacing, refl_mode=refl_mode)
+
+
+def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
+                refl_mode='log'):
     """
-    colors - Either a color recognised by matplotlib or a color map recognised by
-    matplotlib.
+    colors - Either a color recognised by matplotlib or a color
+    map recognised by matplotlib.
     refl_mode: 'log or rq4, changes y axis plotting for refl plot
     """
 
@@ -18,43 +31,37 @@ def graph_plot(report, refl_spacing=10, colors=None, refl_mode='log'):
     refls = report.get_refl_profiles()
     lnprobs = report.get_probs()['lnprobs']
 
-
-    fig, [ax1, ax2, ax3] = plt.subplots(1, 3)
-    fig.set_size_inches(8, 2.5)
-    fig.set_dpi(200)
+    [ax1, ax2, ax3] = ax
 
     # Coordinates for plotting color gradients
-    rect = np.array([0.4,1,0.58,0.09])
-
-    offset = 1
-
+    rect = np.array([0.4, 1, 0.58, 0.09])
 
     if colors is None:
         colors = ['autumn', 'winter', 'cool']
 
     for obj_key, c_name in zip(vfps, colors):
 
-        obj_lnprobs = lnprobs [obj_key]
+        obj_lnprobs = lnprobs[obj_key]
         lnprob_limits = [np.min(obj_lnprobs), np.max(obj_lnprobs)]
 
-        try: # If colour maps are supplied, then they are used
+        try:  # If colour maps are supplied, then they are used
             col = plt.get_cmap(c_name)
             rect[1] -= 0.1
             ax1_I = add_subplot_axes(ax1, rect)
             plot_color_gradients(col, ax1_I)
-            ypos = rect[1] + 0.5*rect[3] -0.005
+            ypos = rect[1] + 0.5*rect[3] - 0.005
             xpos1 = rect[0]
             xpos2 = rect[0]+rect[2]
 
-            l_left = '%0.0f'%lnprob_limits[0]
-            l_right = '%0.0f'%lnprob_limits[1]
+            l_left = '%0.0f' % lnprob_limits[0]
+            l_right = '%0.0f' % lnprob_limits[1]
 
             ax1_I.text(xpos1, ypos, l_left, horizontalalignment='left',
                        verticalalignment='center', transform=ax1.transAxes)
             ax1_I.text(xpos2, ypos, l_right, horizontalalignment='right',
                        verticalalignment='center', transform=ax1.transAxes)
 
-        except ValueError: # Otherwise flat colours are used
+        except ValueError:  # Otherwise flat colours are used
             col = c_name  # if user suplies flat color ('r')
 
         obj_vfps = vfps[obj_key]
@@ -87,6 +94,8 @@ def graph_plot(report, refl_spacing=10, colors=None, refl_mode='log'):
         offset /= refl_spacing
 
     ax3.set_yscale('log')
+
+    return offset
 
 
 def plot_color_gradients(cmap, ax):

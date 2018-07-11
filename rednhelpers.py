@@ -44,6 +44,18 @@ def qcrit(rho1, rho2, picky=False):
     return np.sqrt(16. * np.pi * np.abs(rho2-rho1))
 
 
+def background_estimator(ds, bground_cutoff=0.25, return_stdev=False):
+    """
+    returns an estimate for the average background value for a given
+    dataset, along with it's standard deviation.
+    """
+    mask = ds.x > bground_cutoff
+    if return_stdev:
+        return np.average(ds.y[mask]), np.std(ds.y[mask])
+    else:
+        return np.average(ds.y[mask])
+
+
 def trim_data(ds, qmin, qmax):
     """
     Trim data set down to a specified Q range.
