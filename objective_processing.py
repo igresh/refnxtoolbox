@@ -488,7 +488,7 @@ def pretty_ptemcee(fitter, nsamples, nthin, name=None, save=True):
             if fitter.chain.shape[0] > 1:
                 diff = np.diff(average_lnprob)/nthin
             else:
-                diff = 0
+                diff = [0]
 
             t = time.strftime('%d/%m %H:%M: ')
 
