@@ -4,6 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import os
+import time
+import pickle
 
 
 def plot_reports(reports, refl_spacing=10, refl_mode='log',
@@ -430,9 +432,9 @@ def prob_color(lnprob=None, lnprob_bounds=None, col_map=plt.cm.plasma):
     lnprob: probability within lnprob_bounds
     lnprob_bounds: upper and lower bounds of lnprobaility
     """
-    if type (col_map) is not matplotlib.colors.LinearSegmentedColormap and\
-       type (col_map) is not matplotlib.colors.ListedColormap:
-           return col_map
+    if type(col_map) is not matplotlib.colors.LinearSegmentedColormap and\
+        type(col_map) is not matplotlib.colors.ListedColormap:
+            return col_map
     if lnprob_bounds[0] == lnprob_bounds[1]:
         x = 0.99
     else:
@@ -444,10 +446,11 @@ def prob_color(lnprob=None, lnprob_bounds=None, col_map=plt.cm.plasma):
         x = 0.01
 
     col = np.array(col_map(x))
-    col[col>1] = 1
-    col[col<0] = 0
+    col[col > 1] = 1
+    col[col < 0] = 0
 
     return tuple(col)
+
 
 def unify_xaxes(xs, ys, numpoints=500):
     """
@@ -460,10 +463,37 @@ def unify_xaxes(xs, ys, numpoints=500):
         if np.max(x) > max_x:
             max_x = np.max(x)
 
-    new_x  = np.linspace(0, max_x, numpoints)
+    new_x = np.linspace(0, max_x, numpoints)
     new_ys = np.zeros([len(ys), numpoints])
 
     for index, [x, y] in enumerate(zip(xs, ys)):
         new_ys[index, :] = np.interp(new_x, x, y)
 
     return new_x, new_ys
+
+
+def pretty_ptemcee(fitter, nsamples, nthin, name=None, save=True):
+        objective = fitter.objective
+
+        if name is None:
+            name = objective.name
+
+        print('fitting: %s' % name)
+
+        for i in range(nsamples):
+            fitter.sample(1, nthin=nthin)
+
+            average_lnprob = np.mean(fitter.lnprob[:, 0], axis=1)
+
+            if fitter.chain.shape[0] > 1:
+                diff = np.diff(average_lnprob)/nthin
+            else:
+                diff = 0
+
+            t = time.strftime('%d/%m %H:%M: ')
+
+            print("%s %d/%d - lnprob: %d  dlnprob/dstep: %0.2f" %
+                  (t, i+1, nsamples, average_lnprob[-1], diff[-1]))
+
+            if save:
+                pickle.dump(fitter, open(name + '_fitter.pkl', 'wb'))
