@@ -11,11 +11,16 @@ def plot_reports(reports, refl_spacing=10, refl_mode='log',
     fig, ax = plt.subplots(1, 3)
     fig.set_size_inches(8, 2.5)
     fig.set_dpi(200)
-
     offset = 1
-    for report, c in zip(reports, colors):
-        offset = _graph_plot(report, fig, ax, offset=offset, colors=c,
-                             refl_spacing=refl_spacing, refl_mode=refl_mode)
+
+    if type(reports) == list:
+        for report, c in zip(reports, colors):
+            offset = _graph_plot(report, fig, ax, offset=offset, colors=c,
+                                 refl_spacing=refl_spacing,
+                                 refl_mode=refl_mode)
+    else:
+        _graph_plot(reports, fig, ax, refl_spacing=refl_spacing,
+                    refl_mode=refl_mode)
 
 
 def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
