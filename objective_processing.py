@@ -151,6 +151,7 @@ class report (object):
         self.lnprior = []
         self.lnlike = []
         self.chisqr = []
+        self.pvecs = []
 
         self.obj_reports = None
 
@@ -176,6 +177,7 @@ class report (object):
             self.lnprior.append(master_objective.lnprior())
             self.lnlike.append(master_objective.lnlike())
             self.chisqr.append(master_objective.chisqr())
+            self.pvecs.append(pvec)
             for obj, obj_report in zip(self.objectives, self.obj_reports):
                 obj_report.add_sample(obj)
 
@@ -497,3 +499,31 @@ def pretty_ptemcee(fitter, nsamples, nthin, name=None, save=True):
 
             if save:
                 pickle.dump(fitter, open(name + '_fitter.pkl', 'wb'))
+
+
+def darwinize (fitter, lnprob_cut=None):
+    """
+    Kills off low lnprob walkers, replacing them with beautiful clones high lnprob walkers.
+    """
+    if lnprob_cut:
+        assert lnprob_cut < fitter.lnprob[-1,0].max() , 'There are no samples that qualify!'
+        mask = np.greater_equal(fitter.lnprob[-1,0].T, lnprob_cut).T
+    else:
+        mask = np.greater_equal(fitter.lnprob[-1,0].T, np.mean(fitter.lnprob[-1,0], axis=0)).T
+
+
+    target_size = fitter.chain.shape[2]
+    select_samps = fitter.chain[-1][:,mask]
+    new_pos = select_samps
+    while new_pos.shape[1] < target_size:
+        new_pos = np.concatenate((new_pos, select_samps), axis=1)
+        print(new_pos.shape)
+
+    new_pos = new_pos[:, :target_size]
+
+    print(new_pos.shape)
+
+    print('replacing chain')
+    fitter._state.coords = new_pos
+
+    return fitter
