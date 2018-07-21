@@ -45,9 +45,10 @@ def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
 
     if colors is None:
         colors = ['autumn', 'winter', 'cool']
+    else:
+        colors = [colors] # This will be problematic
 
     for obj_key, c_name in zip(vfps, colors):
-
         obj_lnprobs = lnprobs[obj_key]
         lnprob_limits = [np.min(obj_lnprobs), np.max(obj_lnprobs)]
 
@@ -70,6 +71,8 @@ def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
 
         except ValueError:  # Otherwise flat colours are used
             col = c_name  # if user suplies flat color ('r')
+        except TypeError:
+            col = c_name
 
         obj_vfps = vfps[obj_key]
         obj_slds = slds[obj_key]
