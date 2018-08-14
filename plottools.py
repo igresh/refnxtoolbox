@@ -229,11 +229,19 @@ def plot_quantile_profile(x_axes, y_axes, axis=None, quantiles=[68, 95, 99.8],
     if axis is None:
         fig, axis = plt.subplots()
 
-    for x_axis, y_axis in zip(x_axes, y_axes):
-        assert len(x_axis) == len(y_axis)
-        if y_axis.shape[0] > max_len:
-            max_len = y_axis.shape[0]
-            max_x_axis = x_axis
+    if len(x_axes) == len(y_axes): #One xaxis for every yaxis
+        for x_axis, y_axis in zip(x_axes, y_axes):
+            assert len(x_axis) == len(y_axis)
+            if y_axis.shape[0] > max_len:
+                max_len = y_axis.shape[0]
+                max_x_axis = x_axis
+    else: #Maybe one xaxis for all yaxes?
+        x_axis = x_axes
+        for y_axis in y_axes:
+            assert len(x_axis) == len(y_axis)
+            if y_axis.shape[0] > max_len:
+                max_len = y_axis.shape[0]
+                max_x_axis = x_axis
 
     x_axis = max_x_axis
     y_axes_array = np.zeros([len(y_axes), max_len])
@@ -271,7 +279,7 @@ def plot_quantile_profile(x_axes, y_axes, axis=None, quantiles=[68, 95, 99.8],
 
 def plot_corner(objective, samples):
     labels = []
-    
+
     for i in flatten(objective.parameters.varying_parameters()):
         labels.append(i.name)
 

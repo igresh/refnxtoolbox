@@ -1,6 +1,6 @@
 from __future__ import division
 import numpy as np
-import sys 
+import sys
 
 from scipy.interpolate import PchipInterpolator as Pchip
 from scipy.integrate import simps
@@ -126,7 +126,9 @@ class FreeformVFP(Component):
 
     def _vff_to_vf(self):
         self._update_vfs()
-        return np.cumprod(self.vff) * (self.start_vf-self.end_vf) + self.end_vf
+        vf = np.cumprod(self.vff) * (self.start_vf-self.end_vf) + self.end_vf
+        vf[vf>1] = 1
+        return vf
 
     def _dzf_to_zeds(self):
         zeds = np.cumsum(self.dzf)
@@ -140,14 +142,14 @@ class FreeformVFP(Component):
 
     def _extent(self):
         # First calculate slab area:
-        slab_area = self._slab_area()        
+        slab_area = self._slab_area()
         difference = self.adsorbed_amount - slab_area
 
         assert difference > 0 , 'Your slab area has exceeded your adsorbed amount!'
 
         interpolator = self._vfp_interpolator()
         extent = difference/interpolator.integrate(0, 1)
-            
+
         return extent
 
 
@@ -281,7 +283,7 @@ class FreeformVFP(Component):
 
     @property
     def slabs(self):
-        
+
         cutoff = 10000
         if self._extent() > cutoff:
             print ('extent > %d, perfoming refl. calc on first %dA.'%
@@ -300,9 +302,9 @@ class FreeformVFP(Component):
         slabs[-1:, 3] = 0.5
 
         dist = np.cumsum(slabs[..., 0]) - 0.5 * slab_thick
-        
 
-        
+
+
         slabs[:, 1] = self.polymer_sld.real.value
         slabs[:, 2] = self.polymer_sld.imag.value
         slabs[:, 4] = 1 - self(dist)
