@@ -606,7 +606,7 @@ def hist_plot(report, show_prior=False):
 
 
 def graph_plot(objective=None, pvecs=None, report=None, vfp_location=None, plot_knots=False,
-               fig=None, ax=None, lnprob_limits=None):
+               fig=None, ax=None, lnprob_limits=None, ystyle='log', xstyle='lin'):
     """
     objective (refnx.objective):
         Objective object to be plotted.
@@ -634,10 +634,12 @@ def graph_plot(objective=None, pvecs=None, report=None, vfp_location=None, plot_
     if report is not None:
         if lnprob_limits is None:
             lnprob_limits = 'auto'
-        fig = _report_graph_plot(report, plot_knots=False, fig=None, ax=None, lnprob_limits=lnprob_limits)
+        fig = _report_graph_plot(report, plot_knots=False, fig=None, ax=None,
+                                 lnprob_limits=lnprob_limits, ystyle=ystyle, xstyle=xstyle)
     if objective is not None:
         fig = _objective_graph_plot (objective=objective, pvecs=pvecs, vfp_location=vfp_location,
-                                plot_knots=plot_knots, fig=fig, ax=ax, lnprob_limits=lnprob_limits)
+                                plot_knots=plot_knots, fig=fig, ax=ax, lnprob_limits=lnprob_limits,
+                                ystyle=ystyle, xstyle=xstyle)
 
 
     fig.tight_layout()
@@ -645,7 +647,7 @@ def graph_plot(objective=None, pvecs=None, report=None, vfp_location=None, plot_
 
     return fig, fig.gca()
 
-def _report_graph_plot (report, plot_knots=False, fig=None, ax=None, lnprob_limits='auto'):
+def _report_graph_plot (report, plot_knots=False, fig=None, ax=None, lnprob_limits='auto', ystyle='log', xstyle='lin'):
 
     try:
         vfps = report['vfp - profiles']
@@ -657,6 +659,11 @@ def _report_graph_plot (report, plot_knots=False, fig=None, ax=None, lnprob_limi
     refs = report['refl - profiles']
     data = report['refl - data']
     lnprobs = report['lnprob - data']
+
+    if ystyle == 'rq4':
+        ymult = data['Q']**4
+    else:
+        ymult = 1
 
     if lnprob_limits == 'auto':
         lnprob_limits = [np.min(lnprobs), np.max(lnprobs)]
@@ -672,15 +679,15 @@ def _report_graph_plot (report, plot_knots=False, fig=None, ax=None, lnprob_limi
                 ax1.plot(*vfp_substruct, color=c, alpha=0.02)
 
     else:
-        fig, [ax2, ax3] = CreateAxes (fig, ax, 2)
+        fig, [ax2, ax3] = CreateAxes (fig, ax, 2, xstyle=xstyle, ystyle=ystyle)
         fig.set_size_inches(6, 2.5)
 
-    ax3.errorbar(data['Q'], data['R'], yerr=data['R err'], fmt='none',
-                 capsize=2, linewidth=1, color='k', alpha=0.7)
+    ax3.errorbar(data['Q'], data['R']*ymult, yerr=data['R err']*ymult,
+                 fmt='none', capsize=2, linewidth=1, color='k', alpha=0.7)
 
     for sld, ref, lnprob in zip(slds, refs, lnprobs):
         c = prob_color(lnprob, lnprob_limits, 0)
-        ax3.plot(*ref, color=c, alpha=0.02)
+        ax3.plot(ref[0], ref[1]*ymult, color=c, alpha=0.02)
 
         for sld_substruct, cmod in zip(sld, [0,1,2]):
             c = prob_color(lnprob, lnprob_limits, cmod)
@@ -697,19 +704,23 @@ def _report_graph_plot (report, plot_knots=False, fig=None, ax=None, lnprob_limi
 
 
 def _objective_graph_plot (objective, pvecs=None, vfp_location=None, plot_knots=False,
-               fig=None, ax=None, lnprob_limits=None):
+               fig=None, ax=None, lnprob_limits=None, ystyle='log', xstyle='lin'):
     """
     graph plot if report objective is provided instead of report
     """
 
     if vfp_location is None:
-        fig, [ax2, ax3] = CreateAxes (fig, ax, num_plots=2)
+        fig, [ax2, ax3] = CreateAxes (fig, ax, num_plots=2, xstyle=xstyle, ystyle=ystyle)
     else:
-        fig, [ax1, ax2, ax3] = CreateAxes (fig, ax, num_plots=3)
+        fig, [ax1, ax2, ax3] = CreateAxes (fig, ax, num_plots=3, xstyle=xstyle, ystyle=ystyle)
 
+    if ystyle == 'rq4':
+        ymult = objective.data.x**4
+    else:
+        ymult = 1
     # Plot the reflectometry data on the R vs Q plot
-    ax3.errorbar(objective.data.x, objective.data.y,
-                 yerr=objective.data.y_err, fmt='none', capsize=2,
+    ax3.errorbar(objective.data.x, objective.data.y*ymult,
+                 yerr=objective.data.y_err*ymult, fmt='none', capsize=2,
                  linewidth=1, color='k', alpha=0.7)
 
     if pvecs is None:
@@ -738,7 +749,7 @@ def _objective_graph_plot (objective, pvecs=None, vfp_location=None, plot_knots=
             ax2.plot(*struct.sld_profile(), color=c, alpha=al)
 
         c = prob_color(objective.lnprob(), lnprob_limits, 0)
-        ax3.plot(objective.data.x, objective.model(objective.data.x, x_err=objective.data.x_err),
+        ax3.plot(objective.data.x, objective.model(objective.data.x, x_err=objective.data.x_err)*ymult,
                  color=c, alpha=al)
 
     if lnprob_limits is not None:
@@ -778,7 +789,7 @@ def prob_color(lnprob=None, lnprob_bounds=None, col_mod=0):
     return tuple(col)
 
 
-def CreateAxes (fig, ax, num_plots):
+def CreateAxes (fig, ax, num_plots, ystyle='log', xstyle='lin'):
     if num_plots is 3:
         if fig is None:
             assert ax is None , 'You must provide both a figure and axes objects'
@@ -809,8 +820,11 @@ def CreateAxes (fig, ax, num_plots):
     ax3.set_ylabel(r'$R$')
     ax3.set_xlabel(r'$Q$, $\rm{\AA}^{-1}$')
 
-    # Plot the R vs Q plot on a log-log scale
-    ax3.set_yscale('log'), ax3.set_xscale('log')
+    if ystyle is not 'lin':
+        ax3.set_yscale('log')
+
+    if xstyle is 'log':
+        ax3.set_xscale('log')
 
     return fig, ax
 
