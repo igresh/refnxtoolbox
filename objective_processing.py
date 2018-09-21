@@ -47,7 +47,7 @@ def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
         colors = ['autumn', 'winter', 'cool']
     else:
         colors = [colors] # This will be problematic
-
+        
     for obj_key, c_name in zip(vfps, colors):
         obj_lnprobs = lnprobs[obj_key]
         lnprob_limits = [np.min(obj_lnprobs), np.max(obj_lnprobs)]
@@ -58,6 +58,7 @@ def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
             ax1_I = add_subplot_axes(ax1, rect)
             plot_color_gradients(col, ax1_I)
             ypos = rect[1] + 0.5*rect[3] - 0.005
+
             xpos1 = rect[0]
             xpos2 = rect[0]+rect[2]
 
@@ -69,11 +70,12 @@ def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
             ax1_I.text(xpos2, ypos, l_right, horizontalalignment='right',
                        verticalalignment='center', transform=ax1.transAxes)
 
+        
         except ValueError:  # Otherwise flat colours are used
-            col = c_name  # if user suplies flat color ('r')
+            col = c_name    # if user suplies flat color ('r')
         except TypeError:
             col = c_name
-
+            
         obj_vfps = vfps[obj_key]
         obj_slds = slds[obj_key]
         refl     = refls[obj_key]
@@ -176,10 +178,10 @@ class report (object):
 
         for pvec in pvecs:
             master_objective.setp(pvec)
-            self.lnprob.append(master_objective.lnprob())
-            self.lnprior.append(master_objective.lnprior())
-            self.lnlike.append(master_objective.lnlike())
-            self.chisqr.append(master_objective.chisqr())
+            self.lnprob.append(master_objective.logpost)
+            self.lnprior.append(master_objective.logp)
+            self.lnlike.append(master_objective.logl)
+            self.chisqr.append(master_objective.chisqr)
             self.pvecs.append(pvec)
             for obj, obj_report in zip(self.objectives, self.obj_reports):
                 obj_report.add_sample(obj)
@@ -298,9 +300,9 @@ class objective_report (object):
 
 
     def add_sample (self, objective):
-        self.lnprob.append(objective.lnprob())
-        self.lnprior.append(objective.lnprior())
-        self.lnlike.append(objective.lnlike())
+        self.lnprob.append(objective.logpost())
+        self.lnprior.append(objective.logp())
+        self.lnlike.append(objective.logl())
         self.chisqr.append(objective.chisqr())
 
         if self.refl_Q is None:  # Has not run yet
