@@ -384,14 +384,14 @@ class structure_report (object):
             vfp = structure[self.vfp_location]
             self.moments.append(vfp.moment())
             self.areas.append(vfp.adsorbed_amount.value)
-            self.ismono.append(is_monotonic(vfp))
+            self.ismono.append(vfp.is_monotonic())
+            print('Need to add is_montonic to Spline class')
 
-            z, phi, zk, phik = vfp.profile(extra=True)
+            z, phi = vfp.profile()
 
             self.vfp_z.append(z)
             self.vfp_phi.append(phi)
-            self.vfp_zk.append(zk)
-            self.vfp_phik.append(phik)
+
 
         z, sld = structure.sld_profile()
 
