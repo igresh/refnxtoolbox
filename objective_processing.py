@@ -64,7 +64,7 @@ def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
         colors = ['autumn', 'winter', 'cool']
     else:
         colors = [colors] # This will be problematic
-        
+
     for obj_key, c_name in zip(vfps, colors):
         obj_lnprobs = lnprobs[obj_key]
         lnprob_limits = [np.min(obj_lnprobs), np.max(obj_lnprobs)]
@@ -87,12 +87,12 @@ def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
             ax1_I.text(xpos2, ypos, l_right, horizontalalignment='right',
                        verticalalignment='center', transform=ax1.transAxes)
 
-        
+
         except ValueError:  # Otherwise flat colours are used
             col = c_name    # if user suplies flat color ('r')
         except TypeError:
             col = c_name
-            
+
         obj_vfps = vfps[obj_key]
         obj_slds = slds[obj_key]
         refl     = refls[obj_key]
@@ -404,14 +404,14 @@ class structure_report (object):
             vfp = structure[self.vfp_location]
             self.moments.append(vfp.moment())
             self.areas.append(vfp.adsorbed_amount.value)
-            self.ismono.append(is_monotonic(vfp))
+            self.ismono.append(vfp.is_monotonic())
+            print('Need to add is_montonic to Spline class')
 
-            z, phi, zk, phik = vfp.profile(extra=True)
+            z, phi = vfp.profile()
 
             self.vfp_z.append(z)
             self.vfp_phi.append(phi)
-            self.vfp_zk.append(zk)
-            self.vfp_phik.append(phik)
+
 
         z, sld = structure.sld_profile()
 
@@ -510,7 +510,7 @@ def pretty_ptemcee(fitter, nsamples, nthin, name=None, save=True):
         for i in range(nsamples):
             fitter.sample(1, nthin=nthin)
 
-            average_lnprob = np.mean(fitter.lnprob[:, 0], axis=1)
+            average_lnprob = np.mean(fitter.logpost[:, 0], axis=1)
 
             if fitter.chain.shape[0] > 1:
                 diff = np.diff(average_lnprob)/nthin
