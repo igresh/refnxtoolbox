@@ -78,7 +78,7 @@ class DistributionModel (object):
         
         self.master_structure = structure 
         self.loc_in_struct = loc_in_struct
-        self.param_name = param_name
+        self.param_name = param_name.lower()
         self.num_structs = num_structs
         
         if pdf is None:
@@ -138,12 +138,16 @@ class DistributionModel (object):
         structures = []
         self.distribution_params = []
         COI = self.master_structure[self.loc_in_struct]
+        
 
         for i in range(self.num_structs):
             new_COI = copy(COI)
-            if self.param_name is 'Thickness':
+            if self.param_name == 'thickness':
                 new_COI.thick = Parameter(name='%d - Thick'%i, value=new_COI.thick.value, vary=False)
                 self.distribution_params.append(new_COI.thick)
+            elif self.param_name == 'adsorbed amount':
+                new_COI.adsorbed_amount = Parameter(name='%d - Ads. amnt.'%i, value=new_COI.adsorbed_amount.value, vary=False)
+                self.distribution_params.append(new_COI.adsorbed_amount)
             else:
                 print ('param_name not recognized')
                 
