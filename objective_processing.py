@@ -12,8 +12,23 @@ def plot_reports(reports, refl_spacing=10, refl_mode='log',
                  colors=['r', 'g', 'b']):
     fig, ax = plt.subplots(1, 3)
     fig.set_size_inches(8, 2.5)
-    fig.set_dpi(200)
+    fig.set_dpi(120)
     offset = 1
+    
+    ax[0].set_ylabel('volume fraction')
+    ax[0].set_xlabel('$z \mathrm{,\ \AA}$')
+    ax[1].set_ylabel('SLD, $\mathrm{\AA}^{-1}$')
+    ax[1].set_xlabel('$z \mathrm{,\ \AA}$')
+    
+    if refl_mode == 'log':
+        ax[2].set_ylabel('$R$')
+        ax[2].set_xlabel('$Q$')
+        
+    if refl_mode == 'rq4':
+        ax[2].set_ylabel('$RQ^4 \mathrm{,\ \AA}^{-4}$')
+        ax[2].set_xlabel('$Q \mathrm{,\ \AA}^{-1}$')
+    
+    fig.tight_layout()
 
     if type(reports) == list:
         for report, c in zip(reports, colors):
@@ -23,6 +38,8 @@ def plot_reports(reports, refl_spacing=10, refl_mode='log',
     else:
         _graph_plot(reports, fig, ax, refl_spacing=refl_spacing,
                     refl_mode=refl_mode)
+        
+    ax[2].yaxis.set_ticklabels([])
 
 
 def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
@@ -178,10 +195,10 @@ class report (object):
 
         for pvec in pvecs:
             master_objective.setp(pvec)
-            self.lnprob.append(master_objective.logpost)
-            self.lnprior.append(master_objective.logp)
-            self.lnlike.append(master_objective.logl)
-            self.chisqr.append(master_objective.chisqr)
+            self.lnprob.append(master_objective.logpost())
+            self.lnprior.append(master_objective.logp())
+            self.lnlike.append(master_objective.logl())
+            self.chisqr.append(master_objective.chisqr())
             self.pvecs.append(pvec)
             for obj, obj_report in zip(self.objectives, self.obj_reports):
                 obj_report.add_sample(obj)
@@ -224,15 +241,18 @@ class report (object):
         probs['lnprobs']  = {}
         probs['lnlikes']  = {}
         probs['lnpriors'] = {}
+        probs['chisqr'] = {}
 
         probs['lnprobs']['master objective']  = self.lnprob
         probs['lnlikes']['master objective']  = self.lnlike
         probs['lnpriors']['master objective'] = self.lnprior
+        probs['chisqr']['master objective'] = self.chisqr
 
         for obj_report in self.obj_reports:
             probs['lnprobs'][obj_report.name]  = obj_report.lnprob
             probs['lnlikes'][obj_report.name]  = obj_report.lnlike
             probs['lnpriors'][obj_report.name] = obj_report.lnprior
+            probs['chisqr'][obj_report.name] = obj_report.chisqr
 
         return probs
 
