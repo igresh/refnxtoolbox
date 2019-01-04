@@ -14,7 +14,180 @@ import warnings
 
 import numpy as np
 
-# Class MetaModel ():
+class BaseModel (object):
+    """
+    NOT IMPLIMENTED
+    
+    Should probably get this implimented in refnx propper at some point...
+
+    Does not touch structures
+    """
+    
+    def __init__(self, bkg, name, dq, threads, quad_order):
+        self.name = name
+        self.threads = threads
+        self.quad_order = quad_order
+        self._bkg = possibly_create_parameter(bkg, name='bkg')
+        
+        # we can optimize the resolution (but this is always overridden by
+        # x_err if supplied. There is therefore possibly no dependence on it.
+        self._dq = possibly_create_parameter(dq, name='dq - resolution')
+    
+    def logp(self):
+        r"""
+        Additional log-probability terms for the reflectivity model. Do not
+        include log-probability terms for model parameters, these are
+        automatically calculated elsewhere.
+
+        Returns
+        -------
+        logp : float
+            log-probability of structure.
+
+        """
+        logp = 0
+        for structure in self._structures:
+            logp += structure.logp()
+
+        return logp
+
+    
+    @property
+    def bkg(self):
+        r"""
+        :class:`refnx.analysis.Parameter` - linear background added to all
+        model values.
+
+        """
+        return self._bkg
+
+
+    @bkg.setter
+    def bkg(self, value):
+        self._bkg.value = value
+
+        
+    @property
+    def dq(self):
+        r"""
+        :class:`refnx.analysis.Parameter`
+
+            - `dq.value == 0`
+               no resolution smearing is employed.
+            - `dq.value > 0`
+               a constant dQ/Q resolution smearing is employed.  For 5%
+               resolution smearing supply 5. However, if `x_err` is supplied to
+               the `model` method, then that overrides any setting reported
+               here.
+
+        """
+        return self._dq
+    
+
+    @dq.setter       
+    def dq(self, value):
+        self._dq.value = value
+        
+
+
+class MetaModel (BaseModel):
+    """
+    Takes two models with scale factors and combines them
+    """
+    
+    def __init__(self, models, scales, bkg=1e-7, name='', dq=5, threads=-1, quad_order=17):
+        super().__init__(bkg=1e-7, name='', dq=5, threads=-1, quad_order=17)
+        
+        self.models = models
+        
+        if scales is not None and len(models) == len(scales):
+            tscales = scales
+        elif scales is not None and len(models) != len(scales):
+            raise ValueError("You need to supply scale factor for each"
+                             " structure")
+        else:
+            tscales = [1 / len(models)] * len(models)
+
+        pscales = []
+        for scale in tscales:
+            p_scale = possibly_create_parameter(scale, name='scale')
+            pscales.append(p_scale)
+            
+        self._scales = pscales
+    
+    def __call__(self, x, p=None, x_err=None):
+        r"""
+        Calculate the generative model
+
+        Parameters
+        ----------
+        x : float or np.ndarray
+            q values for the calculation.
+        p : refnx.analysis.Parameters, optional
+            parameters required to calculate the model
+        x_err : np.ndarray
+            dq resolution smearing values for the dataset being considered.
+
+        Returns
+        -------
+        reflectivity : np.ndarray
+            Calculated reflectivity
+
+        """
+        return self.model(x, p=p, x_err=x_err)
+        
+    def model(self, x, p=None, x_err=None):
+        r"""
+        Calculate the reflectivity of this model
+
+        Parameters
+        ----------
+        x : float or np.ndarray
+            q values for the calculation.
+        p : refnx.analysis.Parameter, optional
+            parameters required to calculate the model
+        x_err : np.ndarray
+            dq resolution smearing values for the dataset being considered.
+
+        Returns
+        -------
+        reflectivity : np.ndarray
+
+        """
+        meta_model = np.zeros_like(x)
+        for model, scale in zip(self.models, self._scales):
+            model.bkg.setp(0)
+            meta_model += model.model(x, p, x_err) * scale.value
+            
+        return meta_model + self.bkg.value
+
+    @property
+    def scales(self):
+        r"""
+        :class:`refnx.analysis.Parameter` - the reflectivity from each of the
+        structures are multiplied by these values to account for patchiness.
+        """
+        return self._scales
+    
+    @property
+    def parameters(self):
+        r"""
+        :class:`refnx.analysis.Parameters` - parameters associated with this
+        model.
+
+        """
+        p = Parameters(name='meta instrument parameters')
+        p.extend([self.bkg, self.dq])
+        self._parameters = Parameters(name=self.name)
+
+        for model, scale in zip(self.models, self._scales):
+            p.extend([scale])
+            p.extend(model.parameters.flattened())
+
+        self._parameters.append(p)
+   
+        return self._parameters
+
 
 class DistributionModel (object):
     """
