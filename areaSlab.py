@@ -157,7 +157,7 @@ class area_slabVF(Component):
 
     Parameters
     ----------
-    dry_thickness : refnx.analysis.Parameter or float
+    adsorbed_amount : refnx.analysis.Parameter or float
         thickness of unsolvated slab (Angstrom)
     sld : refnx.reflect.SLD, complex, or float
         (complex) SLD of film (/1e-6 Angstrom**2)
@@ -170,9 +170,9 @@ class area_slabVF(Component):
 
     """
 
-    def __init__(self, dry_thickness, dry_sld, rough, name='', vfsolv=0):
+    def __init__(self, adsorbed_amount, dry_sld, rough, name='', vfsolv=0):
         super().__init__()
-        self.dry_thickness = possibly_create_parameter(dry_thickness,
+        self.adsorbed_amount = possibly_create_parameter(adsorbed_amount,
                                                name='%s - dry thickness' % name)
         if isinstance(dry_sld, SLD):
             self.sld = dry_sld
@@ -186,7 +186,7 @@ class area_slabVF(Component):
         self.name = name
 
         p = Parameters(name=self.name)
-        p.extend([self.dry_thickness, self.sld.real, self.sld.imag,
+        p.extend([self.adsorbed_amount, self.sld.real, self.sld.imag,
                   self.rough, self.vfsolv])
 
         self._parameters = p
@@ -205,7 +205,7 @@ class area_slabVF(Component):
         """
         slab representation of this component. See :class:`Structure.slabs`
         """
-        thick = self.dry_thickness.value/(1-self.vfsolv.value)
+        thick = self.adsorbed_amount.value/(1-self.vfsolv.value)
         return np.atleast_2d(np.array([thick,
                                        self.sld.real.value,
                                        self.sld.imag.value,
