@@ -33,24 +33,6 @@ class BaseModel (object):
         # x_err if supplied. There is therefore possibly no dependence on it.
         self._dq = possibly_create_parameter(dq, name='dq - resolution')
     
-    def logp(self):
-        r"""
-        Additional log-probability terms for the reflectivity model. Do not
-        include log-probability terms for model parameters, these are
-        automatically calculated elsewhere.
-
-        Returns
-        -------
-        logp : float
-            log-probability of structure.
-
-        """
-        logp = 0
-        for structure in self._structures:
-            logp += structure.logp()
-
-        return logp
-
     
     @property
     def bkg(self):
@@ -95,7 +77,7 @@ class MetaModel (BaseModel):
     Takes two models with scale factors and combines them
     """
     
-    def __init__(self, models, scales, bkg=1e-7, name='', dq=5, threads=-1, quad_order=17):
+    def __init__(self, models, scales, add_params=None, bkg=1e-7, name='', dq=5, threads=-1, quad_order=17):
         super().__init__(bkg=1e-7, name='', dq=5, threads=-1, quad_order=17)
         
         self.models = models
@@ -109,11 +91,16 @@ class MetaModel (BaseModel):
             tscales = [1 / len(models)] * len(models)
 
         pscales = []
-        for scale in tscales:
-            p_scale = possibly_create_parameter(scale, name='scale')
+        for scale_num, scale in enumerate(tscales):
+            p_scale = possibly_create_parameter(scale, name='scale %d'%scale_num)
             pscales.append(p_scale)
             
         self._scales = pscales
+        
+        if add_params is not None:
+            self.additional_params = []
+            for param in add_params:
+                self.additional_params.append(param)
     
     def __call__(self, x, p=None, x_err=None):
         r"""
@@ -157,9 +144,27 @@ class MetaModel (BaseModel):
         meta_model = np.zeros_like(x)
         for model, scale in zip(self.models, self._scales):
             model.bkg.setp(0)
-            meta_model += model.model(x, p, x_err) * scale.value
+            meta_model += model(x, p, x_err) * scale.value
             
         return meta_model + self.bkg.value
+
+    def logp(self):
+        r"""
+        Additional log-probability terms for the reflectivity model. Do not
+        include log-probability terms for model parameters, these are
+        automatically calculated elsewhere.
+
+        Returns
+        -------
+        logp : float
+            log-probability of structure.
+
+        """
+        logp = 0
+        for model in self.models:
+            logp += model.logp()
+
+        return logp
 
     @property
     def scales(self):
@@ -178,6 +183,7 @@ class MetaModel (BaseModel):
         """
         p = Parameters(name='meta instrument parameters')
         p.extend([self.bkg, self.dq])
+        p.extend(self.additional_params)
         self._parameters = Parameters(name=self.name)
 
         for model, scale in zip(self.models, self._scales):
@@ -302,7 +308,6 @@ class DistributionModel (object):
             Calculated reflectivity
 
         """
-        self.generate_thicknesses()
         return self.model(x, p=p, x_err=x_err)
     
 
@@ -419,6 +424,8 @@ class DistributionModel (object):
         reflectivity : np.ndarray
 
         """
+        self.generate_thicknesses()
+
         if p is not None:
             self.parameters.pvals = np.array(p)
         if x_err is None:

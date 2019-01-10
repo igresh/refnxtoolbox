@@ -205,12 +205,23 @@ class area_slabVF(Component):
         """
         slab representation of this component. See :class:`Structure.slabs`
         """
-        thick = self.adsorbed_amount.value/(1-self.vfsolv.value)
-        return np.atleast_2d(np.array([thick,
+        return np.atleast_2d(np.array([self.thick,
                                        self.sld.real.value,
                                        self.sld.imag.value,
                                        self.rough.value,
                                        self.vfsolv.value]))
+    
+    @property
+    def thick(self):
+        return self.adsorbed_amount.value/(1-self.vfsolv.value)
+        
+    def is_monotonic(self):
+        return True
+    
+    
+    def moment(self):
+        return self.thick/2
+    
     
     def profile(self, reverse=False):
         """

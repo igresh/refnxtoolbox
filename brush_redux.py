@@ -247,6 +247,9 @@ class FreeformVFP(Component):
         val = simps(profile, zed)
         area = self.profile_area()
         return val / area
+    
+    def is_monotonic(self):
+        return np.all(self.dzf.pvals < 1)
 
 
     @property
