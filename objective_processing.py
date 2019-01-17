@@ -37,9 +37,11 @@ def plot_reports(reports, refl_spacing=10, refl_mode='log',
                                  refl_mode=refl_mode)
     else:
         _graph_plot(reports, fig, ax, refl_spacing=refl_spacing,
-                    refl_mode=refl_mode)
+                    refl_mode=refl_mode, colors=colors)
         
     ax[2].yaxis.set_ticklabels([])
+    
+    return fig, ax
 
 
 def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
@@ -63,7 +65,7 @@ def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
     if colors is None:
         colors = ['autumn', 'winter', 'cool']
     else:
-        colors = [colors] # This will be problematic
+        colors = colors # This will be problematic
 
     for obj_key, c_name in zip(vfps, colors):
         obj_lnprobs = lnprobs[obj_key]
