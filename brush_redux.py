@@ -8,6 +8,9 @@ from scipy.integrate import simps
 from refnx.reflect import Structure, Component, SLD, Slab
 from refnx.analysis import Parameters, Parameter, possibly_create_parameter
 
+import warnings
+
+
 EPS = np.finfo(float).eps
 
 class FreeformVFP(Component):
@@ -289,8 +292,9 @@ class FreeformVFP(Component):
 
         cutoff = 10000
         if self._extent() > cutoff:
-            print ('extent > %d, perfoming refl. calc on first %dA.'%
-                   (cutoff, cutoff), file=sys.stderr)
+            warnings.warn('extent > %d, perfoming refl. calc on first %dA.'%
+                   (cutoff, cutoff), RuntimeWarning)
+
             slab_extent = cutoff
         else:
             slab_extent = self._extent()
