@@ -158,11 +158,13 @@ class FreeformVFP(Component):
 
     def _slab_area(self):
         area = 0
+        
+        
         for slab in self.left_slabs:
-            _slabs = slab.slabs
+            _slabs = slab.slabs()
             area += _slabs[0, 0] * (1 - _slabs[0, 4])
         for slab in self.right_slabs:
-            _slabs = slab.slabs
+            _slabs = slab.slabs()
             area += _slabs[0, 0] * (1 - _slabs[0, 4])
         return area
 
@@ -287,8 +289,7 @@ class FreeformVFP(Component):
         return area
 
 
-    @property
-    def slabs(self):
+    def slabs(self, structure=None):
 
         cutoff = 10000
         if self._extent() > cutoff:
@@ -309,14 +310,12 @@ class FreeformVFP(Component):
         slabs[-1:, 3] = 0.5
 
         dist = np.cumsum(slabs[..., 0]) - 0.5 * slab_thick
-
-
-
         slabs[:, 1] = self.polymer_sld.real.value
         slabs[:, 2] = self.polymer_sld.imag.value
         slabs[:, 4] = 1 - self(dist)
 
         return slabs
+
 
 
     def profile(self, extra=False):
@@ -340,8 +339,8 @@ class FreeformVFP(Component):
             layer.vfsolv.value = slab.vfsolv.value
             s |= layer
 
-        polymer_slabs = self.slabs
-        offset = np.sum(s.slabs[:, 0])
+        polymer_slabs = self.slabs()
+        offset = np.sum(s.slabs()[:, 0])
 
         for i in range(np.size(polymer_slabs, 0)):
             layer = m(polymer_slabs[i, 0], polymer_slabs[i, 3])
@@ -356,7 +355,7 @@ class FreeformVFP(Component):
         s |= SLD(0, 0)
 
         # now calculate the VFP.
-        total_thickness = np.sum(s.slabs[:, 0])
+        total_thickness = np.sum(s.slabs()[:, 0])
         if total_thickness < 500:
             num_zed_points = total_thickness
         else:

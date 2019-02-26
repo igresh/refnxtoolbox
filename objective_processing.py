@@ -407,7 +407,6 @@ class structure_report (object):
             self.moments.append(vfp.moment())
             self.areas.append(vfp.adsorbed_amount.value)
             self.ismono.append(vfp.is_monotonic())
-            print('Need to add is_montonic to Spline class')
 
             z, phi = vfp.profile()
 
@@ -501,16 +500,17 @@ def unify_xaxes(xs, ys, numpoints=500):
     return new_x, new_ys
 
 
-def pretty_ptemcee(fitter, nsamples, nthin, name=None, save=True):
+def pretty_ptemcee(fitter, nsamples, nthin, name=None, save=True, nCPUs=-1):
         objective = fitter.objective
 
         if name is None:
             name = objective.name
 
-        print('fitting: %s' % name)
+        t = time.strftime('%d/%m %H:%M: ')
+        print('%s fitting: %s' % (t, name))
 
         for i in range(nsamples):
-            fitter.sample(1, nthin=nthin)
+            fitter.sample(1, nthin=nthin, pool=nCPUs)
 
             average_lnprob = np.mean(fitter.logpost[:, 0], axis=1)
 
