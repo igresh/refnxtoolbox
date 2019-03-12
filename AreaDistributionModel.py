@@ -438,7 +438,7 @@ class DistributionModel (object):
 
         for scale, structure in zip(scales, self.structures):
             y += reflectivity(x,
-                              structure.slabs[..., :4],
+                              structure.slabs()[..., :4],
                               scale=scale,
                               dq=x_err,
                               threads=self.threads,

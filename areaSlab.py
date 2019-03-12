@@ -124,8 +124,7 @@ class ConstrainedAmountModel(Component):
         p.extend([component.parameters for component in self.structure])
         return p
     
-    @property
-    def slabs(self):
+    def slabs(self, structure=None):
         """
         slab representation of this component. See :class:`Structure.slabs`
         """
@@ -200,8 +199,7 @@ class area_slabVF(Component):
         self._parameters.name = self.name
         return self._parameters
 
-    @property
-    def slabs(self):
+    def slabs(self, structure=None):
         """
         slab representation of this component. See :class:`Structure.slabs`
         """
@@ -314,8 +312,7 @@ class area_slabT(Component):
         #              self.vfsolv.value)
         return repr(self.parameters)
 
-    @property
-    def slabs(self):
+    def slabs(self, structure=None):
         """
         slab representation of this component. See :class:`Structure.slabs`
         """
