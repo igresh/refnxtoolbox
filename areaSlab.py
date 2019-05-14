@@ -91,7 +91,7 @@ class ConstrainedAmountModel(Component):
 
         m = SLD(1.)
 
-        for i, slab in enumerate(self.slabs):
+        for i, slab in enumerate(self.slabs()):
             layer = m(slab[0], slab[3])
             if self.pure_sld == None: #Two component system
                 layer.vfsolv.value = slab[4]
@@ -109,7 +109,7 @@ class ConstrainedAmountModel(Component):
         s.solvent = 0
         s.reverse_structure = reverse
         # now calculate the VFP.
-        total_thickness = np.sum(self.slabs[:, 0])
+        total_thickness = np.sum(self.slabs()[:, 0])
         buffer = total_thickness*0.1
         zed = np.linspace(-buffer, buffer+total_thickness, 1000)
         z, s = s.sld_profile(z=zed)
@@ -229,7 +229,7 @@ class area_slabVF(Component):
         s = Structure()
         s |= SLD(0)
         
-        slab = self.slabs[0]
+        slab = self.slabs()[0]
         thick = slab[0]
         rough = slab[3]
         vfsolv = slab[4]
@@ -338,7 +338,7 @@ class area_slabT(Component):
         s = Structure()
         s |= SLD(0)
         
-        slab = self.slabs[0]
+        slab = self.slabs()[0]
         thick = slab[0]
         rough = slab[3]
         vfsolv = slab[4]

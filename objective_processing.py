@@ -61,9 +61,12 @@ def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
 
     # Coordinates for plotting color gradients
     rect = np.array([0.4, 1, 0.58, 0.09])
+    
 
     if colors is None:
         colors = ['autumn', 'winter', 'cool']
+    elif isinstance(colors, np.ndarray):
+        colors = [colors] # This will be problematic        
     else:
         colors = colors # This will be problematic
 
@@ -94,6 +97,7 @@ def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
             col = c_name    # if user suplies flat color ('r')
         except TypeError:
             col = c_name
+            
 
         obj_vfps = vfps[obj_key]
         obj_slds = slds[obj_key]
@@ -104,12 +108,11 @@ def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
             vfp = obj_vfps[struct_key]
             sld = obj_slds[struct_key]
             for z, vf, lnp in zip(vfp['z'], vfp['vf'], obj_lnprobs):
-                c = prob_color(lnp, lnprob_limits, col_map=col)
-                ax1.plot(z, vf, color=c, linestyle=ls, alpha=alpha)
+                ax1.plot(z, vf, color=col, linestyle=ls, alpha=alpha)
 
             for z, sld, lnp in zip(sld['z'], sld['sld'], obj_lnprobs):
                 c = prob_color(lnp, lnprob_limits, col_map=col)
-                ax2.plot(z, sld, color=c, linestyle=ls, alpha=alpha)
+                ax2.plot(z, sld, color=col, linestyle=ls, alpha=alpha)
 
         if refl_mode == 'rq4':
             scale = offset*refl['data Q']**4
@@ -119,8 +122,7 @@ def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
         ax3.errorbar(refl['data Q'], refl['data R']*scale,
                      yerr=refl['data R err']*scale, fmt=',', color='k')
         for R, lnp in zip(refl['R'], obj_lnprobs):
-            c = prob_color(lnp, lnprob_limits, col_map=col)
-            ax3.plot(refl['Q'], R*scale, color=c, alpha=alpha)
+            ax3.plot(refl['Q'], R*scale, color=col, alpha=alpha)
 
         offset /= refl_spacing
 
