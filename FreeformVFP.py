@@ -1,6 +1,4 @@
-from __future__ import division
 import numpy as np
-import sys
 
 from scipy.interpolate import PchipInterpolator as Pchip
 from scipy.integrate import simps
@@ -13,9 +11,8 @@ import warnings
 
 EPS = np.finfo(float).eps
 
+
 class FreeformVFP(Component):
-    """
-    """
     def __init__(self, adsorbed_amount, vff, dzf, polymer_sld, name='',
                  left_slabs=(), right_slabs=(),
                  interpolator=Pchip, zgrad=True,
@@ -48,9 +45,10 @@ class FreeformVFP(Component):
         microslab_max_thickness : float
             Thickness of microslicing of spline for reflectivity calculation.
         """
+        super(FreeformVFP, self).__init__()
 
-        assert len(vff) + 1 == len(dzf) , 'Length of dzf must be one greater\
-                                           than length of vff'
+        assert len(vff) + 1 == len(dzf), ("Length of dzf must be one greater"
+                                          " than length of vff")
 
         self.name = name
 
@@ -111,7 +109,8 @@ class FreeformVFP(Component):
                                       'vf': np.array([]),
                                       'interp': None,
                                       'adsorbed amount': -1}
-    def _update_vfs (self):
+
+    def _update_vfs(self):
         # use the volume fraction of the last left_slab as the initial vf of
         # the spline, if not left slabs supplied start at vf 1
         if len(self.left_slabs):
@@ -126,11 +125,10 @@ class FreeformVFP(Component):
         else:
             self.end_vf = 0
 
-
     def _vff_to_vf(self):
         self._update_vfs()
-        vf = np.cumprod(self.vff) * (self.start_vf-self.end_vf) + self.end_vf
-        vf[vf>1] = 1
+        vf = np.cumprod(self.vff) * (self.start_vf - self.end_vf) + self.end_vf
+        vf = np.clip(vf, 0, 1)
         return vf
 
     def _dzf_to_zeds(self):
@@ -146,20 +144,19 @@ class FreeformVFP(Component):
     def _extent(self):
         # First calculate slab area:
         slab_area = self._slab_area()
-        difference = self.adsorbed_amount - slab_area
+        difference = float(self.adsorbed_amount) - slab_area
 
-        assert difference > 0 , 'Your slab area has exceeded your adsorbed amount!'
+        assert difference > 0, ("Your slab area has exceeded your adsorbed"
+                                " amount!")
 
         interpolator = self._vfp_interpolator()
-        extent = difference/interpolator.integrate(0, 1)
+        extent = difference / interpolator.integrate(0, 1)
 
         return extent
 
-
     def _slab_area(self):
         area = 0
-        
-        
+
         for slab in self.left_slabs:
             _slabs = slab.slabs()
             area += _slabs[0, 0] * (1 - _slabs[0, 4])
@@ -167,7 +164,6 @@ class FreeformVFP(Component):
             _slabs = slab.slabs()
             area += _slabs[0, 0] * (1 - _slabs[0, 4])
         return area
-
 
     def _vfp_interpolator(self):
         """
@@ -199,20 +195,19 @@ class FreeformVFP(Component):
         cache_adsamt = self.__cached_interpolator['adsorbed amount']
 
         # you don't need to recreate the interpolator
-        if (np.array_equal(zeds, cache_zeds) and
-                np.array_equal(vf, cache_vf) and
-                np.equal(self.adsorbed_amount, cache_adsamt)):
+        if (np.equal(float(self.adsorbed_amount), cache_adsamt) and
+            np.array_equal(zeds, cache_zeds) and
+                np.array_equal(vf, cache_vf)):
             return self.__cached_interpolator['interp']
         else:
             self.__cached_interpolator['zeds'] = zeds
             self.__cached_interpolator['vf'] = vf
-            self.__cached_interpolator['adsorbed amount'] = float(self.adsorbed_amount)
+            self.__cached_interpolator['adsorbed amount'] = (
+                float(self.adsorbed_amount))
 
-        # TODO make vfp zero for z > self.extent
         interpolator = self.interpolator(zeds, vf)
         self.__cached_interpolator['interp'] = interpolator
         return interpolator
-
 
     def __call__(self, z):
         """
@@ -231,7 +226,6 @@ class FreeformVFP(Component):
         interpolator = self._vfp_interpolator()
         vfp = interpolator(z / float(self._extent()))
         return vfp
-
 
     def moment(self, moment=1):
         """
@@ -252,10 +246,9 @@ class FreeformVFP(Component):
         val = simps(profile, zed)
         area = self.profile_area()
         return val / area
-    
+
     def is_monotonic(self):
         return np.all(self.dzf.pvals < 1)
-
 
     @property
     def parameters(self):
@@ -266,12 +259,8 @@ class FreeformVFP(Component):
         p.extend([slab.parameters for slab in self.right_slabs])
         return p
 
-
     def lnprob(self):
-        lnprob = 0
-
-        return lnprob
-
+        return 0
 
     def profile_area(self):
         """
@@ -288,18 +277,16 @@ class FreeformVFP(Component):
 
         return area
 
-
     def slabs(self, structure=None):
 
         cutoff = 10000
-        if self._extent() > cutoff:
-            warnings.warn('extent > %d, perfoming refl. calc on first %dA.'%
-                   (cutoff, cutoff), RuntimeWarning)
+        slab_extent = self._extent()
+
+        if slab_extent > cutoff:
+            warnings.warn('extent > %d, perfoming refl. calc on first %dA.' %
+                          (cutoff, cutoff), RuntimeWarning)
 
             slab_extent = cutoff
-        else:
-            slab_extent = self._extent()
-
 
         num_slabs = np.ceil(float(slab_extent) / self.microslab_max_thickness)
         slab_thick = float(slab_extent / num_slabs)
@@ -315,8 +302,6 @@ class FreeformVFP(Component):
         slabs[:, 4] = 1 - self(dist)
 
         return slabs
-
-
 
     def profile(self, extra=False):
         """
@@ -375,84 +360,3 @@ class FreeformVFP(Component):
             return z, s, zed_knots, self._vff_to_vf()
         else:
             return z, s
-
-
-class Brush_SLD(SLD):
-    """
-    Object representing freely varying SLD of a material
-
-    Parameters
-    ----------
-    value : float or complex
-        Scattering length density of a material.
-        Units (10**-6 Angstrom**-2)
-    name : str, optional
-        Name of material.
-
-
-    Notes
-    -----
-    An SLD object can be used to create a Slab:
-
-    >>> # an SLD object representing Silicon Dioxide
-    >>> sio2 = SLD(3.47, name='SiO2')
-    >>> # create a Slab of SiO2 20 A in thickness, with a 3 A roughness
-    >>> sio2_layer = SLD(20, 3)
-
-    """
-    def __init__(self, dry_sld, adsorbed_amount, dry_thickness, dry_filler_sld=0, name=''):
-        self.name = name
-
-        if isinstance(dry_sld, SLD):
-            self.dry_sld = dry_sld
-        else:
-            self.dry_sld = SLD(dry_sld, name='measured dry')
-
-        if isinstance(dry_filler_sld, SLD):
-            self.dry_filler_sld = dry_filler_sld
-        else:
-            self.dry_filler_sld = SLD(dry_filler_sld, name='dry filler')
-
-        if isinstance(adsorbed_amount, Parameter):
-            self.adsorbed_amount = adsorbed_amount
-        else:
-            self.adsorbed_amount = possibly_create_parameter(adsorbed_amount,
-                                                            name='adsorbed amount')
-
-        if isinstance(dry_thickness, Parameter):
-            self.dry_thickness = dry_thickness
-        else:
-            self.dry_thickness = possibly_create_parameter(dry_thickness,
-                                                            name='dry thickness')
-
-    def __call__(self, thick=0, rough=0):
-        return Slab(thick, self, rough, name=self.name)
-
-    def __or__(self, other):
-        # c = self | other
-        slab = self()
-        return slab | other
-
-    @property
-    def real(self):
-        v = (self.dry_thickness.value*(self.dry_sld.real.value-self.dry_filler_sld.real.value)
-                +self.adsorbed_amount.value*self.dry_filler_sld.real.value)/self.adsorbed_amount.value
-        return Parameter(name='%s - real'%self.name, value=v)
-    @property
-    def imag(self):
-        # Not implemented
-        return Parameter(name='%s - imag'%self.name, value=0)
-        #return (self.dry_thickness*(self.dry_sld.real.value-self.dry_filler_sld.real.value)
-        #        +self.adsorbed_amount.value*self.dry_filler_sld.real.value)/self.adsorbed_amount.value
-
-    @property
-    def parameters(self):
-        """
-        :class:`refnx.analysis.Parameters` associated with this component
-
-        """
-        self._parameters = Parameters(name=self.name)
-        self._parameters.extend([self.dry_sld.real, self.dry_sld.imag,
-                                 self.dry_filler_sld.real, self.dry_filler_sld.imag,
-                                 self.adsorbed_amount, self.dry_thickness])
-        return self._parameters
