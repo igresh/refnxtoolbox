@@ -132,7 +132,7 @@ def plot_burnplot(objective, chain, burn=None,
     return fig, fig.axes
 
 
-def plot_lnprob_distribution(objective, chain, burn=0, axis=None, colour='k'):
+def plot_logpost_distribution(objective, chain, burn=0, axis=None, colour='k'):
     """
     parameters:
     -----------
@@ -153,12 +153,12 @@ def plot_lnprob_distribution(objective, chain, burn=0, axis=None, colour='k'):
     if axis is None:
         fig, axis = plt.subplots()
 
-    lnprobs = []
+    logposts = []
     for sample in samples:
         objective.setp(sample)
-        lnprobs.append(objective.lnprob())
+        logposts.append(objective.logpost())
 
-    axis.hist(lnprobs, density=True, histtype='step', alpha=1, color=colour)
+    axis.hist(logposts, density=True, histtype='step', alpha=1, color=colour)
 
 
 def plot_walker_trace(parameter, samples, temps=[0], tcolors=['k'],
@@ -302,7 +302,7 @@ def process_samples(objective, pvecs, vfp_location=None):
         return _process_samples_generic(objective, structures, pvecs)
 
 
-def _process_samples_brush(objective, structures, pvecs, vfp_location):
+def _process_samples_brush (objective, structures, pvecs, vfp_location):
     """
     objective: objective
     """
@@ -314,20 +314,20 @@ def _process_samples_brush(objective, structures, pvecs, vfp_location):
     areas = []
     scale_fctrs = []
     ismono = []
-    lnprobs = []
-    lnpriors = []
-    lnlikes = []
+    logposts = []
+    logps = []
+    logls = []
     sld_profiles = []
     vfp_profiles = []
     vfp_knots = []
     ref_profiles = []
 
-    best_lnprob = -1e108
+    best_logpost = -1e108
     best_profile = None
     best_area = None
     best_moment = None
-    best_lnlike = None
-    best_lnprior = None
+    best_logl = None
+    best_logp = None
 
     max_z = 0
 
@@ -357,24 +357,24 @@ def _process_samples_brush(objective, structures, pvecs, vfp_location):
         else:
             scale_fctrs.append(objective.model.scale.value)
 
-        lnprobs.append(objective.lnprob())
-        lnpriors.append(objective.lnprior())
-        lnlikes.append(objective.lnlike())
+        logposts.append(objective.logpost())
+        logps.append(objective.logp())
+        logls.append(objective.logl())
 
         ref_profile = [objective.data.x,
                        objective.model(objective.data.x,
                                        x_err=objective.data.x_err)]
         ref_profiles.append(ref_profile)
 
-        if objective.lnprob() > best_lnprob:
+        if objective.logpost() > best_logpost:
             best_profile = [z, phi, zk, phik]
             best_area = vfp.profile_area()
             best_moment = vfp.moment()
-            best_lnprior = objective.lnprior()
-            best_lnlike = objective.lnlike()
+            best_logp = objective.logp()
+            best_logl = objective.logl()
             best_sld = sld_profile
             best_ref = ref_profile
-            best_lnprob = objective.lnprob()
+            best_logpost = objective.logpost()
 
     vfp_profiles = unify_xaxes(vfp_profiles, max_z, numpoints=500)
     sld_profiles = unify_xaxes(sld_profiles, max_z, numpoints=500)
@@ -399,22 +399,22 @@ def _process_samples_brush(objective, structures, pvecs, vfp_location):
     report['area - data'] = np.array(areas)
     report['area - best'] = best_area
 
-    report['lnprob - mean'] = np.mean(lnprobs)
-    report['lnprob - stdev'] = np.std(lnprobs)
-    report['lnprob - data'] = np.array(lnprobs)
-    report['lnprob - best'] = best_lnprob
+    report['logpost - mean'] = np.mean(logposts)
+    report['logpost - stdev'] = np.std(logposts)
+    report['logpost - data'] = np.array(logposts)
+    report['logpost - best'] = best_logpost
 
-    report['lnprior - mean'] = np.mean(lnpriors)
-    report['lnprior - stdev'] = np.std(lnpriors)
-    report['lnprior - data'] = np.array(lnpriors)
-    report['lnprior - best'] = best_lnprior
+    report['logp - mean'] = np.mean(logps)
+    report['logp - stdev'] = np.std(logps)
+    report['logp - data'] = np.array(logps)
+    report['logp - best'] = best_logp
 
     report['is monotonic'] = ismono
 
-    report['lnlike - mean'] = np.mean(lnlikes)
-    report['lnlike - stdev'] = np.std(lnlikes)
-    report['lnlike - data'] = np.array(lnlikes)
-    report['lnlike - best'] = best_lnlike
+    report['logl - mean'] = np.mean(logls)
+    report['logl - stdev'] = np.std(logls)
+    report['logl - data'] = np.array(logls)
+    report['logl - best'] = best_logl
 
     report['vfp - best'] = best_profile
     report['vfp - profiles'] = np.array(vfp_profiles)
@@ -445,13 +445,13 @@ def _process_samples_generic(objective, structures, pvecs):
     report = {}
     samples = []
     scale_fctrs = []
-    lnprobs = []
-    lnpriors = []
-    lnlikes = []
+    logposts = []
+    logps = []
+    logls = []
     sld_profiles = []
     ref_profiles = []
 
-    best_lnprob = -1e108
+    best_logpost = -1e108
 
     max_z = 0
 
@@ -473,21 +473,21 @@ def _process_samples_generic(objective, structures, pvecs):
         else:
             scale_fctrs.append(objective.model.scale.value)
 
-        lnprobs.append(objective.lnprob())
-        lnpriors.append(objective.lnprior())
-        lnlikes.append(objective.lnlike())
+        logposts.append(objective.logpost())
+        logps.append(objective.logp())
+        logls.append(objective.logl())
 
         ref_profile = [objective.data.x,
                        objective.model(objective.data.x,
                                        x_err=objective.data.x_err)]
         ref_profiles.append(ref_profile)
 
-        if objective.lnprob() > best_lnprob:
-            best_lnprior = objective.lnprior()
-            best_lnlike = objective.lnlike()
+        if objective.logpost() > best_logpost:
+            best_logp = objective.logp()
+            best_logl = objective.logl()
             best_sld = sld_profile
             best_ref = ref_profile
-            best_lnprob = objective.lnprob()
+            best_logpost = objective.logpost()
 
     sld_profiles = unify_xaxes(sld_profiles, max_z, numpoints=500)
 
@@ -496,20 +496,20 @@ def _process_samples_generic(objective, structures, pvecs):
 
     report['scale factor/s'] = scale_fctrs
 
-    report['lnprob - mean'] = np.mean(lnprobs)
-    report['lnprob - stdev'] = np.std(lnprobs)
-    report['lnprob - data'] = np.array(lnprobs)
-    report['lnprob - best'] = best_lnprob
+    report['logpost - mean'] = np.mean(logposts)
+    report['logpost - stdev'] = np.std(logposts)
+    report['logpost - data'] = np.array(logposts)
+    report['logpost - best'] = best_logpost
 
-    report['lnprior - mean'] = np.mean(lnpriors)
-    report['lnprior - stdev'] = np.std(lnpriors)
-    report['lnprior - data'] = np.array(lnpriors)
-    report['lnprior - best'] = best_lnprior
+    report['logp - mean'] = np.mean(logps)
+    report['logp - stdev'] = np.std(logps)
+    report['logp - data'] = np.array(logps)
+    report['logp - best'] = best_logp
 
-    report['lnlike - mean'] = np.mean(lnlikes)
-    report['lnlike - stdev'] = np.std(lnlikes)
-    report['lnlike - data'] = np.array(lnlikes)
-    report['lnlike - best'] = best_lnlike
+    report['logl - mean'] = np.mean(logls)
+    report['logl - stdev'] = np.std(logls)
+    report['logl - data'] = np.array(logls)
+    report['logl - best'] = best_logl
 
     report['sld - best'] = best_sld
     report['sld - profiles'] = np.array(sld_profiles)
@@ -556,9 +556,9 @@ def hist_plot(report, show_prior=False):
         fig, ax3 = plt.subplots()
         fig.set_size_inches(2.5, 2.5)
 
-    lnprob = report['lnprob - data']
-    lnlike = report['lnlike - data']
-    lnprior = report['lnprior - data']
+    logpost = report['logpost - data']
+    logl = report['logl - data']
+    logp = report['logp - data']
     norm_scales = (report['scale factor/s'].T/np.sum(report['scale factor/s'],
                    axis=1)).T
 
@@ -583,14 +583,14 @@ def hist_plot(report, show_prior=False):
         ax2.tick_params(axis='y', labelsize=8)
 
 
-    ax3.hist(lnlike, density=True, histtype='step', color='xkcd:blue',
+    ax3.hist(logl, density=True, histtype='step', color='xkcd:blue',
              linewidth=1, label='likelihood')
-    ax3.hist(lnprob, density=True, histtype='step', color='xkcd:purple',
+    ax3.hist(logpost, density=True, histtype='step', color='xkcd:purple',
              linewidth=1, label='posterior')
 
     if show_prior:
         ax4 = ax3.twiny()
-        ax4.hist(lnprior, density=True, histtype='step', color='xkcd:red',
+        ax4.hist(logp, density=True, histtype='step', color='xkcd:red',
                  linewidth=0.5, label='prior')
         ax4.set_xlabel('ln(prior)', color='xkcd:red')
 
@@ -606,7 +606,7 @@ def hist_plot(report, show_prior=False):
 
 
 def graph_plot(objective=None, pvecs=None, report=None, vfp_location=None, plot_knots=False,
-               fig=None, ax=None, lnprob_limits=None, ystyle='log', xstyle='lin'):
+               fig=None, ax=None, logpost_limits=None, ystyle='log', xstyle='lin'):
     """
     objective (refnx.objective):
         Objective object to be plotted.
@@ -624,21 +624,21 @@ def graph_plot(objective=None, pvecs=None, report=None, vfp_location=None, plot_
         If true will show know locations on the volume fraction profile
     fig, ax:
         graph_plot will use supplied fig, ax objects if provided.
-    lnprob_limits (list):
-        List containing lower and upper limits of the lnprob for the system.
+    logpost_limits (list):
+        List containing lower and upper limits of the logpost for the system.
         If provided will set the colour of profiles based on their probability.
     """
 
 
 
     if report is not None:
-        if lnprob_limits is None:
-            lnprob_limits = 'auto'
+        if logpost_limits is None:
+            logpost_limits = 'auto'
         fig = _report_graph_plot(report, plot_knots=False, fig=None, ax=None,
-                                 lnprob_limits=lnprob_limits, ystyle=ystyle, xstyle=xstyle)
+                                 logpost_limits=logpost_limits, ystyle=ystyle, xstyle=xstyle)
     if objective is not None:
         fig = _objective_graph_plot (objective=objective, pvecs=pvecs, vfp_location=vfp_location,
-                                plot_knots=plot_knots, fig=fig, ax=ax, lnprob_limits=lnprob_limits,
+                                plot_knots=plot_knots, fig=fig, ax=ax, logpost_limits=logpost_limits,
                                 ystyle=ystyle, xstyle=xstyle)
 
 
@@ -647,7 +647,7 @@ def graph_plot(objective=None, pvecs=None, report=None, vfp_location=None, plot_
 
     return fig, fig.gca()
 
-def _report_graph_plot (report, plot_knots=False, fig=None, ax=None, lnprob_limits='auto', ystyle='log', xstyle='lin'):
+def _report_graph_plot (report, plot_knots=False, fig=None, ax=None, logpost_limits='auto', ystyle='log', xstyle='lin'):
 
     try:
         vfps = report['vfp - profiles']
@@ -658,24 +658,24 @@ def _report_graph_plot (report, plot_knots=False, fig=None, ax=None, lnprob_limi
     slds = report['sld - profiles']
     refs = report['refl - profiles']
     data = report['refl - data']
-    lnprobs = report['lnprob - data']
+    logposts = report['logpost - data']
 
     if ystyle == 'rq4':
         ymult = data['Q']**4
     else:
         ymult = 1
 
-    if lnprob_limits == 'auto':
-        lnprob_limits = [np.min(lnprobs), np.max(lnprobs)]
+    if logpost_limits == 'auto':
+        logpost_limits = [np.min(logposts), np.max(logposts)]
 
     if vfp_exists:
         fig, [ax1, ax2, ax3] = CreateAxes(fig, ax, 3)
         fig.set_size_inches(8, 2.5)
 
-        for vfp, lnprob in zip(vfps, lnprobs):
+        for vfp, logpost in zip(vfps, logposts):
 
             for vfp_substruct, cmod in zip(vfp, [0, 1, 2]):
-                c = prob_color(lnprob, lnprob_limits, cmod)
+                c = prob_color(logpost, logpost_limits, cmod)
                 ax1.plot(*vfp_substruct, color=c, alpha=0.02)
 
     else:
@@ -685,18 +685,18 @@ def _report_graph_plot (report, plot_knots=False, fig=None, ax=None, lnprob_limi
     ax3.errorbar(data['Q'], data['R']*ymult, yerr=data['R err']*ymult,
                  fmt='none', capsize=2, linewidth=1, color='k', alpha=0.7)
 
-    for sld, ref, lnprob in zip(slds, refs, lnprobs):
-        c = prob_color(lnprob, lnprob_limits, 0)
+    for sld, ref, logpost in zip(slds, refs, logposts):
+        c = prob_color(logpost, logpost_limits, 0)
         ax3.plot(ref[0], ref[1]*ymult, color=c, alpha=0.02)
 
         for sld_substruct, cmod in zip(sld, [0,1,2]):
-            c = prob_color(lnprob, lnprob_limits, cmod)
+            c = prob_color(logpost, logpost_limits, cmod)
             ax2.plot(*sld_substruct, color=c, alpha=0.02)
 
-    if lnprob_limits is not None:
-        leg_patches = [mpatches.Patch(color=(0,0,0,0), label='lnprob:'),
-                   mpatches.Patch(color=prob_color(lnprob_limits[0], lnprob_limits, 0), label='   %d'%lnprob_limits[0]),
-                   mpatches.Patch(color=prob_color(lnprob_limits[1], lnprob_limits, 0), label='   %d'%lnprob_limits[1])]
+    if logpost_limits is not None:
+        leg_patches = [mpatches.Patch(color=(0,0,0,0), label='logpost:'),
+                   mpatches.Patch(color=prob_color(logpost_limits[0], logpost_limits, 0), label='   %d'%logpost_limits[0]),
+                   mpatches.Patch(color=prob_color(logpost_limits[1], logpost_limits, 0), label='   %d'%logpost_limits[1])]
         ax2.legend(handles=leg_patches, fontsize='x-small', frameon=False)
 
     return fig
@@ -704,7 +704,7 @@ def _report_graph_plot (report, plot_knots=False, fig=None, ax=None, lnprob_limi
 
 
 def _objective_graph_plot (objective, pvecs=None, vfp_location=None, plot_knots=False,
-               fig=None, ax=None, lnprob_limits=None, ystyle='log', xstyle='lin'):
+               fig=None, ax=None, logpost_limits=None, ystyle='log', xstyle='lin'):
     """
     graph plot if report objective is provided instead of report
     """
@@ -739,7 +739,7 @@ def _objective_graph_plot (objective, pvecs=None, vfp_location=None, plot_knots=
         objective.setp(pvec)
 
         for struct, c_mod in zip(structures, [0, 1, 2]):
-            c = prob_color(objective.lnprob(), lnprob_limits, c_mod)
+            c = prob_color(objective.logpost(), logpost_limits, c_mod)
             if vfp_location is not None:
                 z, phi, zk, phik = struct[vfp_location].profile(extra=True)
                 ax1.plot(z, phi, color=c, alpha=al)
@@ -748,30 +748,30 @@ def _objective_graph_plot (objective, pvecs=None, vfp_location=None, plot_knots=
 
             ax2.plot(*struct.sld_profile(), color=c, alpha=al)
 
-        c = prob_color(objective.lnprob(), lnprob_limits, 0)
+        c = prob_color(objective.logpost(), logpost_limits, 0)
         ax3.plot(objective.data.x, objective.model(objective.data.x, x_err=objective.data.x_err)*ymult,
                  color=c, alpha=al)
 
-    if lnprob_limits is not None:
-        leg_patches = [mpatches.Patch(color=(0, 0, 0, 0), label='lnprob:'),
-                       mpatches.Patch(color=prob_color(lnprob_limits[0], lnprob_limits, 0), label='   %d'%lnprob_limits[0]),
-                       mpatches.Patch(color=prob_color(lnprob_limits[1], lnprob_limits, 0), label='   %d'%lnprob_limits[1])]
+    if logpost_limits is not None:
+        leg_patches = [mpatches.Patch(color=(0, 0, 0, 0), label='logpost:'),
+                       mpatches.Patch(color=prob_color(logpost_limits[0], logpost_limits, 0), label='   %d'%logpost_limits[0]),
+                       mpatches.Patch(color=prob_color(logpost_limits[1], logpost_limits, 0), label='   %d'%logpost_limits[1])]
 
         ax2.legend(handles=leg_patches, fontsize='x-small', frameon=False)
 
     return fig
 
 
-def prob_color(lnprob=None, lnprob_bounds=None, col_mod=0):
+def prob_color(logpost=None, logpost_bounds=None, col_mod=0):
     """
-    lnprob: probability within lnprob_bounds
-    lnprob_bounds: upper and lower bounds of lnprobaility
+    logpost: probability within logpost_bounds
+    logpost_bounds: upper and lower bounds of logpostaility
     col_mod: Modifies the colour, making it lighter or darker
     """
-    if lnprob_bounds is None:
+    if logpost_bounds is None:
         return plt.cm.Set1(col_mod/8.0)
 
-    x = (lnprob-lnprob_bounds[0])/(lnprob_bounds[1]-lnprob_bounds[0])
+    x = (logpost-logpost_bounds[0])/(logpost_bounds[1]-logpost_bounds[0])
 
     if x > 0.99:
         x = 0.99
