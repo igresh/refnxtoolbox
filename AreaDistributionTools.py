@@ -188,7 +188,7 @@ def plot_distmodel(objective, refl_mode='rq4', maxd=1000):
     fig.tight_layout()
 
 
-def make_objective(name, data, unconfined_objective, pset, bset,
+def make_objective(name, data, unconfined_objective, pset, bset=None,
                    num_points=101, withtail=True):
     """
     Make an objective featuring a distribution model, in style of Gresham 2020.
@@ -236,15 +236,10 @@ def make_objective(name, data, unconfined_objective, pset, bset,
 
     # Silica
     sio2_l        = sio2(14.6, 2)
-    sio2_l.thick.setp                    (vary=False, bounds=(14.6, 18.6))
-    sio2_l.vfsolv.setp                   (vary=False, value=0.003, bounds=(0, 0.2))
-    sio2_l.rough.setp                    (vary=False, bounds=(0.5, 5))
+    sio2_l.vfsolv.setp                   (value=0.003)
 
     polymer_l_mel = area_slabT(adsorbed_amount=200, dry_sld=polymer, rough=2,
                                thick=1500, name='polymer')
-    polymer_l_mel.adsorbed_amount.setp   (vary=False, bounds=(185, 210))
-    polymer_l_mel.thick.setp             (vary=False)
-    polymer_l_mel.rough.setp             (vary=False, bounds=(1, 6))
 
     mellinex_l = melinex(0,14)
     mellinex_l.rough.setp                (vary=False, bounds=(1, 20))
@@ -264,13 +259,13 @@ def make_objective(name, data, unconfined_objective, pset, bset,
     distmodel = DistributionModel(structure_mel, loc_in_struct=2,
                                   num_structs=num_points, pdf=dist_pdf,
                                   pdf_kwargs={'loc':1, 'scale':1, 'a':1, 'tail':0.00, 'tail_len':400})
-    distmodel.pdf_params[0].setp(value=210, vary=True, bounds=(180, 230))
-    distmodel.pdf_params[1].setp(value=6, vary=True, bounds=(1, 20))
-    distmodel.pdf_params[2].setp(value=3, vary=True, bounds=(1.1, 20))
+    distmodel.pdf_params[0].setp(value=210)
+    distmodel.pdf_params[1].setp(value=6)
+    distmodel.pdf_params[2].setp(value=3)
 
     if withtail:
-        distmodel.pdf_params[3].setp(value=0.0001, vary=True, bounds=(0, 0.01))
-        distmodel.pdf_params[4].setp(value=400, vary=True, bounds=(200, 1000))
+        distmodel.pdf_params[3].setp(value=0.0001)
+        distmodel.pdf_params[4].setp(value=400)
     else:
         distmodel.pdf_params[3].setp(value=0, vary=False)
         distmodel.pdf_params[4].setp(value=0, vary=False)   
@@ -278,11 +273,10 @@ def make_objective(name, data, unconfined_objective, pset, bset,
     h2omodel = ReflectModel(structure_h2o, name='h2o')
 
 
-    sratio = Parameter(value=0.1, name='scale ratio',
-                       bounds=(0, 0.5), vary=True)
+    sratio = Parameter(value=0.1, name='scale ratio')
 
     model = MetaModel([distmodel, h2omodel], [0.5, 0.5], add_params=[sratio])
-    model.scales[0].setp(value=0.97, vary=True, bounds=(0.90, 1.04))
+    model.scales[0].setp(value=0.97)
     model.scales[1] = model.scales[0]*sratio
     model.bkg.setp(value=5e-6)
 
@@ -291,9 +285,10 @@ def make_objective(name, data, unconfined_objective, pset, bset,
     for key in pset:
         set_param(obj.parameters, key, value=pset[key])
 
-    for key in bset:
-        set_param(obj.parameters, key, bounds=bset[key])
-        
+    if bset is not None:
+        for key in bset:
+            set_param(obj.parameters, key, bounds=bset[key])
+
     return obj
 
 
