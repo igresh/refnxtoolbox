@@ -17,7 +17,7 @@ from AreaDistributionModel import MetaModel, DistributionModel
 from areaSlab import area_slabT
 
 
-def dist_pdf(z, loc, scale, a=0, tail=0, tail_len=0):
+def dist_pdf(z, loc, scale, a, tail=0, tail_len=0):
     """
     Separation probability density function for confinement cell modelling.
 
@@ -57,7 +57,7 @@ def dist_pdf(z, loc, scale, a=0, tail=0, tail_len=0):
     pdf1 = gamma.pdf(z, loc=loc, scale=scale, a=a)
 
     tpeak = loc + (a-1)*scale
-    tcut = tail_len + loc
+    tcut = tail_len + loc + (a-1)*scale
     tstart = loc
     pdf2 = np.ones_like(z)
     pdf2[z < tpeak] = (z[z < tpeak] - loc)/(tpeak - loc)
