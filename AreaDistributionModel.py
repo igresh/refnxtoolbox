@@ -10,30 +10,29 @@ from refnx.analysis import Parameters, Parameter, possibly_create_parameter
 from refnx.reflect import reflectivity
 
 from copy import copy
-import warnings
 
 import numpy as np
+
 
 class BaseModel (object):
     """
     NOT IMPLIMENTED
-    
+
     Should probably get this implimented in refnx propper at some point...
 
     Does not touch structures
     """
-    
+
     def __init__(self, bkg, name, dq, threads, quad_order):
         self.name = name
         self.threads = threads
         self.quad_order = quad_order
         self._bkg = possibly_create_parameter(bkg, name='bkg')
-        
+
         # we can optimize the resolution (but this is always overridden by
         # x_err if supplied. There is therefore possibly no dependence on it.
         self._dq = possibly_create_parameter(dq, name='dq - resolution')
-    
-    
+
     @property
     def bkg(self):
         r"""
@@ -43,12 +42,10 @@ class BaseModel (object):
         """
         return self._bkg
 
-
     @bkg.setter
     def bkg(self, value):
         self._bkg.value = value
 
-        
     @property
     def dq(self):
         r"""
@@ -76,12 +73,13 @@ class MetaModel (BaseModel):
     """
     Takes two models with scale factors and combines them
     """
-    
-    def __init__(self, models, scales, add_params=None, bkg=1e-7, name='', dq=5, threads=-1, quad_order=17):
+
+    def __init__(self, models, scales, add_params=None, bkg=1e-7, name='',
+                 dq=5, threads=-1, quad_order=17):
         super().__init__(bkg=1e-7, name='', dq=5, threads=-1, quad_order=17)
-        
+
         self.models = models
-        
+
         if scales is not None and len(models) == len(scales):
             tscales = scales
         elif scales is not None and len(models) != len(scales):
@@ -94,14 +92,14 @@ class MetaModel (BaseModel):
         for scale_num, scale in enumerate(tscales):
             p_scale = possibly_create_parameter(scale, name='scale %d'%scale_num)
             pscales.append(p_scale)
-            
+
         self._scales = pscales
-        
+
         if add_params is not None:
             self.additional_params = []
             for param in add_params:
                 self.additional_params.append(param)
-    
+
     def __call__(self, x, p=None, x_err=None):
         r"""
         Calculate the generative model
@@ -158,8 +156,8 @@ class MetaModel (BaseModel):
         -------
         logp : float
             log-probability of structure.
-
         """
+
         logp = 0
         for model in self.models:
             logp += model.logp()
@@ -247,22 +245,22 @@ class DistributionModel (object):
 
     """
     def __init__ (self, structure, loc_in_struct, param_name='Thickness',
-                  pdf=None, pdf_kwargs=None, num_structs=11, scale=1, bkg=1e-7, name='',
-                  dq=5, threads=-1, quad_order=17):
-        
+                  pdf=None, pdf_kwargs=None, num_structs=11, scale=1, bkg=1e-7,
+                  name='', dq=5, threads=-1, quad_order=17):
+
         self.name = name
         self._parameters = None
         self.threads = threads
         self.quad_order = quad_order
-        
-        self.master_structure = structure 
+        self.master_structure = structure
         self.loc_in_struct = loc_in_struct
         self.param_name = param_name.lower()
         self.num_structs = num_structs
-        
+        self._scale = scale
+
         if pdf is None:
             self.pdf = norm.pdf
-        
+
             if pdf_kwargs is None:
                 self.pdf_params = []
                 self.pdf_params.append(possibly_create_parameter(value=10, name='loc'))
@@ -278,17 +276,14 @@ class DistributionModel (object):
 
         self._structures = self.create_structures()
         self._scales = np.ones(self.num_structs)/self.num_structs
-        
         self._bkg = possibly_create_parameter(bkg, name='bkg')
-        
+
         # we can optimize the resolution (but this is always overridden by
         # x_err if supplied. There is therefore possibly no dependence on it.
         self._dq = possibly_create_parameter(dq, name='dq - resolution')
 
-        
         self.generate_thicknesses()
-        
-        
+
     def __call__(self, x, p=None, x_err=None):
         r"""
         Calculate the generative model
@@ -310,60 +305,66 @@ class DistributionModel (object):
         """
         return self.model(x, p=p, x_err=x_err)
     
+    def __repr__(self):
+        return ("DistributionModel({master_structure!r}, name={name!r},"
+                " scale={_scale!r}, bkg={_bkg!r},"
+                " dq={_dq!r}, threads={threads},"
+                " quad_order={quad_order})".format(**self.__dict__))
 
-        
     def create_structures(self):
         structures = []
         self.distribution_params = []
         COI = self.master_structure[self.loc_in_struct]
-        
 
         for i in range(self.num_structs):
             new_COI = copy(COI)
+
             if self.param_name == 'thickness':
-                new_COI.thick = Parameter(name='%d - Thick'%i, value=new_COI.thick.value, vary=False)
+                new_COI.thick = Parameter(name='%d - Thick' % i,
+                                          value=new_COI.thick.value, vary=False)
                 self.distribution_params.append(new_COI.thick)
             elif self.param_name == 'adsorbed amount':
-                new_COI.adsorbed_amount = Parameter(name='%d - Ads. amnt.'%i, value=new_COI.adsorbed_amount.value, vary=False)
+                new_COI.adsorbed_amount = Parameter(name='%d - Ads. amnt.' % i,
+                                                    value=new_COI.adsorbed_amount.value, vary=False)
                 self.distribution_params.append(new_COI.adsorbed_amount)
             else:
-                print ('param_name not recognized')
-                
+                print('param_name not recognized')
+
             struct = self.master_structure[0]
+
             for component in self.master_structure[1:]:
                 if component is not COI:
                     struct = struct | component
                 else:
                     struct = struct | new_COI
-            
+
             struct.solvent = self.master_structure.solvent
             structures.append(struct)
-        
+
         return structures
-    
+
     @property
     def pdf_kwargs(self):
         temp = {}
         for param in self.pdf_params:
             temp[param.name] = param.value
         return temp
-        
-        
-    def generate_thicknesses (self):
-        d = np.linspace(0,5000, 10000)
+
+    def generate_thicknesses(self):
+        d = np.linspace(0, 5000, 10000)
         pdf = self.pdf(d, **self.pdf_kwargs)
         effective_component = d[pdf > 0.01*pdf.max()]
         effective_pdf = pdf[pdf > 0.01*pdf.max()]
         effective_range = [effective_component.min(), effective_component.max()]
-        
+
         pvals = np.linspace(*effective_range, num=self.num_structs)
-        
+
         for pval, param in zip(pvals, self.distribution_params):
             param.value = pval
-            
+
         scales = np.interp(pvals, effective_component, effective_pdf)
         self._scales = scales/np.sum(scales)
-        
+
     @property
     def dq(self):
         r"""
@@ -376,12 +377,10 @@ class DistributionModel (object):
                resolution smearing supply 5. However, if `x_err` is supplied to
                the `model` method, then that overrides any setting reported
                here.
-
         """
         return self._dq
-    
 
-    @dq.setter       
+    @dq.setter
     def dq(self, value):
         self._dq.value = value
 
@@ -444,7 +443,7 @@ class DistributionModel (object):
                               threads=self.threads,
                               quad_order=self.quad_order)
 
-        return y + self.bkg.value
+        return self._scale*y + self.bkg.value
 
     def logp(self):
         r"""
@@ -488,9 +487,3 @@ class DistributionModel (object):
         self._parameters.extend([structure.parameters for structure
                                  in self._structures])
         return self._parameters
-
-      
-
-        
-
-            

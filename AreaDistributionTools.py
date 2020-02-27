@@ -3,10 +3,12 @@ Created on Tue Jan  7 14:30:09 2020
 
 @author: Isaac
 """
-from scipy.stats import gamma
 import numpy as np
 
 from matplotlib import pyplot as plt
+
+from scipy.stats import gamma
+import scipy.special as sc
 
 from refnx.reflect import SLD, Slab, ReflectModel, MixedReflectModel
 from refnx.dataset import ReflectDataset as RD
@@ -58,9 +60,9 @@ def dist_pdf(z, loc, scale, a, tail=0, tail_len=0):
 
     tpeak = loc + (a-1)*scale
     tcut = tail_len + loc + (a-1)*scale
-    tstart = loc
+    tstart = gamma.interval(0.999, loc=loc, scale=scale, a=a)[0] #start at 1% of cdf 
     pdf2 = np.ones_like(z)
-    pdf2[z < tpeak] = (z[z < tpeak] - loc)/(tpeak - loc)
+    pdf2[z < tpeak] = (z[z < tpeak] - tstart)/(tpeak - tstart)
     pdf2[z > tpeak] = (tcut - z[z > tpeak])/(tcut - tpeak)
     pdf2[z > tcut] = 0
     pdf2[z < tstart] = 0
