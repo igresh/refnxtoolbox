@@ -342,7 +342,7 @@ class FreeformVFP(Component):
         # now calculate the VFP.
         total_thickness = np.sum(s.slabs()[:, 0])
         if total_thickness < 500:
-            num_zed_points = total_thickness
+            num_zed_points = int(total_thickness)
         else:
             num_zed_points = 500
         zed = np.linspace(0, total_thickness, num_zed_points)
