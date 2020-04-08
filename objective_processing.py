@@ -40,7 +40,7 @@ def plot_reports(reports, refl_spacing=10, refl_mode='log',
                     refl_mode=refl_mode, colors=colors)
         
     ax[2].yaxis.set_ticklabels([])
-    
+    ax[0].legend(frameon=False)
     return fig, ax
 
 
@@ -108,7 +108,8 @@ def _graph_plot(report, fig, ax, offset=1, refl_spacing=10, colors=None,
             vfp = obj_vfps[struct_key]
             sld = obj_slds[struct_key]
             for z, vf, lnp in zip(vfp['z'], vfp['vf'], obj_lnprobs):
-                ax1.plot(z, vf, color=col, linestyle=ls, alpha=alpha)
+                ax1.plot(z, vf, color=col, linestyle=ls, alpha=alpha,
+                         label=obj_key)
 
             for z, sld, lnp in zip(sld['z'], sld['sld'], obj_lnprobs):
                 c = prob_color(lnp, lnprob_limits, col_map=col)
