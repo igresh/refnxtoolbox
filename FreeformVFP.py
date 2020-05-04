@@ -279,7 +279,7 @@ class FreeformVFP(Component):
 
     def slabs(self, structure=None):
 
-        cutoff = 10000
+        cutoff = 5000
         slab_extent = self._extent()
 
         if slab_extent > cutoff:
