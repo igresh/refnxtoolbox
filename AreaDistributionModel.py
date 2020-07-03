@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Wed Nov 28 10:14:32 2018
 
@@ -15,8 +14,9 @@ import numpy as np
 
 
 class BaseModel (object):
+
     """
-    NOT IMPLIMENTED
+    NOT IMPLIMENTED.
 
     Should probably get this implimented in refnx propper at some point...
 
@@ -35,7 +35,8 @@ class BaseModel (object):
 
     @property
     def bkg(self):
-        r"""
+
+        """
         :class:`refnx.analysis.Parameter` - linear background added to all
         model values.
 
@@ -61,15 +62,14 @@ class BaseModel (object):
 
         """
         return self._dq
-    
 
-    @dq.setter       
+    @dq.setter
     def dq(self, value):
         self._dq.value = value
-        
 
 
 class MetaModel (BaseModel):
+
     """
     Takes two models with scale factors and combines them
     """
@@ -101,6 +101,7 @@ class MetaModel (BaseModel):
                 self.additional_params.append(param)
 
     def __call__(self, x, p=None, x_err=None):
+
         r"""
         Calculate the generative model
 

@@ -16,7 +16,7 @@ class FreeformVFP(Component):
     def __init__(self, adsorbed_amount, vff, dzf, polymer_sld, name='',
                  left_slabs=(), right_slabs=(),
                  interpolator=Pchip, zgrad=True,
-                 microslab_max_thickness=1):
+                 microslab_max_thickness=1, profile_cutoff=5000):
         """
         Parameters
         ----------
@@ -44,6 +44,9 @@ class FreeformVFP(Component):
             at each end of the spline.
         microslab_max_thickness : float
             Thickness of microslicing of spline for reflectivity calculation.
+        profile_cutoff : float
+            maximum extent (thickness) of the freeform profile. The profile is
+            'cut off' (VF=0) after this point.
         """
         super(FreeformVFP, self).__init__()
 
@@ -101,6 +104,8 @@ class FreeformVFP(Component):
                 name='%s - spline vff[%d]' % (name, i))
             p.range(0, 1)
             self.vff.append(p)
+
+        self.cutoff = profile_cutoff
 
         self.zgrad = zgrad
         self.interpolator = interpolator
@@ -279,8 +284,13 @@ class FreeformVFP(Component):
 
     def slabs(self, structure=None):
 
-        cutoff = 5000
         slab_extent = self._extent()
+        
+        try:
+            cutoff = self.cutoff
+        except AttributeError:
+            cutoff = 5000
+            warnings.warn('FreeformVFP out of date')
 
         if slab_extent > cutoff:
             warnings.warn('extent > %d, perfoming refl. calc on first %dA.' %
