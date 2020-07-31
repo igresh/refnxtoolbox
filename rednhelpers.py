@@ -1,6 +1,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import matplotlib.cm
 import os.path
 import warnings
@@ -146,8 +147,25 @@ def apply_scale_factors(datasets, qc=None, scales=None, **kwargs):
         d.ds.scale(s)
 
 
+def get_name(dataset):
+    """
+
+    Parameters
+    ----------
+    dataset : ReflectDataset
+
+    Returns
+    -------
+    string
+        name of the dataset
+
+    """
+    return dataset.name
+
+
 def plot_data_sets(data, qmax=None, title=None, offset=1, divisor=1,
-                  fig=None, axs=None, cmap=None):
+                   fig=None, axs=None, cmap=None, sort=False, getColorKey=None,
+                   colorKeyBounds=(0, 100), label=None, legend=True):
     """
     Plot reflectometry data sets
 
@@ -176,56 +194,96 @@ def plot_data_sets(data, qmax=None, title=None, offset=1, divisor=1,
         Axes onto which the curves will be plotted
     cmap : str
         Name of a matplotlib colormap to apply to the data sets
+    getColorKey : function
+        function that returns the property that the
+        colour will depend on given the dataset name.
+        Colours will be based off cmap (default plasma)
+        (This functionality was written by Isaac, so it might be a bit dodge)
+    colorKeyBounds : tuple
+        upper and lower bounds of the value that the colour will depend on
+    label : string or list
+        text to plot at the location of the lowest-Q point in the dataset. If
+        it is a list it will be plotted for every dataset supplied.
     """
     if axs is None:
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14,6))
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
     else:
         (ax1, ax2) = axs
 
+    if sort is True:
+        data = sorted(data, key=get_name)
+
     factor = divisor
 
-    if cmap:
+    if getColorKey:
+        norm       = mpl.colors.Normalize(*colorKeyBounds)
+        if not cmap:
+            cmap = plt.cm.plasma
+
+        scalar_map = plt.cm.ScalarMappable(norm, cmap)
+
+        if not legend and len(ax1.child_axes) == 0:
+            inset_ax = ax1.inset_axes([0.5, 0.9, 0.45, 0.05])
+            fig.colorbar(scalar_map, cax=inset_ax, orientation='horizontal')
+
+    elif cmap:
         colormap = matplotlib.cm.get_cmap(cmap)
         colorcycle = colormap(np.linspace(0.2, 0.8, len(data)))
         ax1.set_prop_cycle('color', colorcycle)
         ax2.set_prop_cycle('color', colorcycle)
-    
+
+    if label and type(label) is not list:
+        label = [label]
+    elif label:
+        label.reverse()  # reverse so we can pop
+
     for dataset in data:
         try:
             ds = dataset.ds
-            label = dataset.name
+            name = dataset.name
         except AttributeError:
-            ds, label = dataset
-            #raise ValueError("Don't know how to deal with dataset", dataset)
+            ds, name = dataset
 
         try:
-            ax1.errorbar(ds.data[0], ds.data[1] * factor,
-                         yerr=ds.data[2] * factor,
-                         marker='.', label=label)
+            format = {'marker' : '.', 'label' : name}
+            if getColorKey:
+                format['color'] = scalar_map.to_rgba(getColorKey(name))
 
-            #ax2.plot(ds.data[0], ds.data[1] * ds.data[0]**4)
+            ax1.errorbar(ds.data[0], ds.data[1] * factor,
+                         yerr=ds.data[2] * factor, **format)
+
             ax2.errorbar(ds.data[0], ds.data[1] * factor * ds.data[0]**4,
-                         yerr=(ds.data[2] * factor * ds.data[0]**4),
-                         marker='.', label=label)
+                         yerr=(ds.data[2] * factor * ds.data[0]**4), **format)
+
+            if label and len(label) != 0:
+                lab = label.pop()
+                ax1.text(x=ds.data[0][0], y=0.8 * ds.data[1][0] * factor,
+                         s=lab, ha='left', va='top')
+                ax2.text(x=ds.data[0][0], y=0.8 * ds.data[1][0] * factor * ds.data[0][0]**4,
+                         s=lab, ha='left', va='top')
 
             factor /= offset
+
         except AttributeError:
-            print("Warning: data set was skipped: %s\n%s" % (dataset.name, str(dataset)))
+            print(f"Warning: data set was skipped: {dataset.name}")
+            print(f"{str(dataset)}")
 
     ax1.set_yscale('log')
     if qmax is not None:
         ax1.set_xlim(0, qmax)
-    ax1.set(xlabel='$Q$//A', ylabel='$R$')
+    ax1.set(xlabel='$Q,\ \mathrm{\AA}^{-1}$', ylabel='$R$')
 
     ax2.set_yscale('log')
     if qmax is not None:
         ax2.set_xlim(0, qmax)
-    ax2.set(xlabel='$Q$//A', ylabel='$RQ^4$')
+    ax2.set(xlabel='$Q,\ \mathrm{\AA}^{-1}$', ylabel='$RQ^4,\ \mathrm{\AA}^{-4}$')
 
     if title is not None and fig is not None:
         fig.suptitle(title)
 
-    # FIXME: this can crash if there is no data to plot
-    ax1.legend(loc='upper right')
-    return fig, (ax1, ax2)
+    if legend is True:
+        ax1.legend(loc='upper right')
 
+    fig.tight_layout()
+
+    return fig, (ax1, ax2)

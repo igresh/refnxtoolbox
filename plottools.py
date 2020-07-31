@@ -452,6 +452,10 @@ def _process_samples_generic(objective, structures, pvecs):
     ref_profiles = []
 
     best_logpost = -1e108
+    best_logl = None
+    best_logp = None
+    best_sld = None
+    best_ref = None
 
     max_z = 0
 
