@@ -100,6 +100,7 @@ class MetaModel (BaseModel):
             for param in add_params:
                 self.additional_params.append(param)
 
+
     def __call__(self, x, p=None, x_err=None):
 
         r"""
@@ -121,7 +122,7 @@ class MetaModel (BaseModel):
 
         """
         return self.model(x, p=p, x_err=x_err)
-        
+
     def model(self, x, p=None, x_err=None):
         r"""
         Calculate the reflectivity of this model
@@ -144,7 +145,7 @@ class MetaModel (BaseModel):
         for model, scale in zip(self.models, self._scales):
             model.bkg.setp(0)
             meta_model += model(x, p, x_err) * scale.value
-            
+
         return meta_model + self.bkg.value
 
     def logp(self):
