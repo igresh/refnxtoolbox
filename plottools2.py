@@ -14,7 +14,8 @@ import matplotlib.colors as clrs
 def graph_plot(report=None, objective=None, sld_plot=True, refl_plot=True,
                vf_plot=False, fig=None, ax=None,
                logpost_limits='auto', ystyle='r', xstyle='lin', color=None,
-               cbar=False, orientation='v', fig_kwargs=None, offset=1):
+               cbar=False, orientation='v', fig_kwargs=None, offset=1,
+               profile_offset=False):
     """
     Process an objective, generating a report.
 
@@ -68,6 +69,8 @@ def graph_plot(report=None, objective=None, sld_plot=True, refl_plot=True,
         multiple reports or objectives are supplied if you want to vertically
         offset curves a value of 0.01 is reccomended. The default is 1, which
         does not offset curves.
+    profile_offset : bool, optional
+        Value to allow vertical offset of VFP and SLD profiles. Default False.
 
 
     Returns
@@ -107,13 +110,20 @@ def graph_plot(report=None, objective=None, sld_plot=True, refl_plot=True,
         else:
             colors = [color] * num_reports
 
+        profileOS = 0
+
         for rep, col in zip(report, colors):
-            _report_graph_plot(rep, plot_knots=False, ax=ax,
+            _report_graph_plot(rep, ax=ax,
                                logpost_limits=logpost_limits, ystyle=ystyle,
-                               color=col, cbar=cbar, offset=reflOS)
+                               color=col, cbar=cbar, offset=reflOS,
+                               profile_offset=profileOS)
             reflOS *= offset
+            if profile_offset:
+                profileOS -= 1
+
+            cbar = False
     else:
-        _report_graph_plot(report, plot_knots=False, ax=ax,
+        _report_graph_plot(report, ax=ax,
                            logpost_limits=logpost_limits, ystyle=ystyle,
                            color=color, cbar=cbar)
 
@@ -121,7 +131,8 @@ def graph_plot(report=None, objective=None, sld_plot=True, refl_plot=True,
 
 
 def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
-                       xstyle='lin', color=None, cbar=False, offset=1):
+                       xstyle='lin', color=None, cbar=False, offset=1,
+                       profile_offset=0):
     """
     Plot a single report on a given set of axes.
 
@@ -152,6 +163,8 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
         multiple reports or objectives are supplied if you want to vertically
         offset curves a value of 0.01 is reccomended. The default is 1, which
         does not offset curves.
+    profile_offset : float, optional
+        Value to allow vertical offset of VFP and SLD profiles
     """
     vfps = report.model.vfp
     slds = report.model.sld
@@ -180,9 +193,12 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
                  fmt='none', capsize=2, linewidth=1, color='k', alpha=0.7)
 
     if axVF:
-        plot_profiles(vfps, ax=axVF, line_plotter=lp, cmap_keys=logposts)
+        plot_profiles(vfps, ax=axVF, line_plotter=lp, cmap_keys=logposts,
+                      yoffset=profile_offset)
     if axSLD:
-        plot_profiles(slds, ax=axSLD, line_plotter=lp, cmap_keys=logposts)
+        pOS = profile_offset * (np.max(slds[0][1]) - np.min(slds[0][1]))
+        plot_profiles(slds, ax=axSLD, line_plotter=lp, cmap_keys=logposts,
+                      yoffset=pOS)
     if axR:
         plot_profiles(refs, ax=axR, line_plotter=lp, cmap_keys=logposts,
                       ymult=ymult * offset)
@@ -191,7 +207,7 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
         lp.make_cbar(axR)
 
 
-def plot_profiles(profiles, ax, line_plotter, cmap_keys, ymult=1):
+def plot_profiles(profiles, ax, line_plotter, cmap_keys, ymult=1, yoffset=0):
     """
     Iterate through provided profiles and plot them using lineplotter.
 
@@ -215,7 +231,7 @@ def plot_profiles(profiles, ax, line_plotter, cmap_keys, ymult=1):
     for profile, cmap_key in zip(profiles, cmap_keys):
         line_plotter.plot_line(ax,
                                profile[0],
-                               profile[1] * ymult,
+                               profile[1] * ymult - yoffset,
                                cmap_key=cmap_key)
 
 

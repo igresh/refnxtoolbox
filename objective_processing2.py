@@ -62,7 +62,7 @@ class objective_report (object):
         None.
 
         """
-        if not pvecs:
+        if pvecs is None:
             pvecs = [self.objective.parameters.flattened()]
 
         for pvec in pvecs:
