@@ -26,6 +26,7 @@ class objective_report (object):
 
     def __init__(self, objective):
         self.objective = objective
+        self.name = objective.name
         self.num_samples = 0
         self.logpost = []
         self.logp = []

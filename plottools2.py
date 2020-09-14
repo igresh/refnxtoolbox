@@ -9,6 +9,8 @@ import objective_processing2
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as clrs
+import matplotlib.patheffects as pe
+
 
 
 def graph_plot(report=None, objective=None, sld_plot=True, refl_plot=True,
@@ -166,6 +168,7 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
     profile_offset : float, optional
         Value to allow vertical offset of VFP and SLD profiles
     """
+    name = report.name
     vfps = report.model.vfp
     slds = report.model.sld
     refs = report.ref
@@ -194,20 +197,21 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
 
     if axVF:
         plot_profiles(vfps, ax=axVF, line_plotter=lp, cmap_keys=logposts,
-                      yoffset=profile_offset)
+                      yoffset=profile_offset, label=name)
     if axSLD:
         pOS = profile_offset * (np.max(slds[0][1]) - np.min(slds[0][1]))
         plot_profiles(slds, ax=axSLD, line_plotter=lp, cmap_keys=logposts,
-                      yoffset=pOS)
+                      yoffset=pOS, label=name)
     if axR:
         plot_profiles(refs, ax=axR, line_plotter=lp, cmap_keys=logposts,
-                      ymult=ymult * offset)
+                      ymult=ymult * offset, label=name)
 
     if cbar:
         lp.make_cbar(axR)
 
 
-def plot_profiles(profiles, ax, line_plotter, cmap_keys, ymult=1, yoffset=0):
+def plot_profiles(profiles, ax, line_plotter, cmap_keys, ymult=1, yoffset=0,
+                  label=None):
     """
     Iterate through provided profiles and plot them using lineplotter.
 
@@ -232,7 +236,8 @@ def plot_profiles(profiles, ax, line_plotter, cmap_keys, ymult=1, yoffset=0):
         line_plotter.plot_line(ax,
                                profile[0],
                                profile[1] * ymult - yoffset,
-                               cmap_key=cmap_key)
+                               cmap_key=cmap_key, label=label)
+        label = None
 
 
 class lineplotter (object):
@@ -422,6 +427,13 @@ def CreateAxes(fig=None, sld_plot=True, refl_plot=True, vf_plot=False,
     if vf_plot:
         vf_plot.set_ylabel('volume fraction')
         vf_plot.set_xlabel(r'distance from substrate, $\mathrm{\AA}$',
-                            labelpad=0.1)
+                           labelpad=0.1)
 
+    label = 'a'
+    for ax in [vf_plot, sld_plot, refl_plot]:
+        if ax:
+            ax.text(0.02, 0.98, s=f'{label})', ha='left', va='top',
+                    transform=ax.transAxes,
+                    path_effects=[pe.withStroke(linewidth=3, foreground="w")])
+            label = chr(ord(label) + 1)
     return fig, to_plot_ls
