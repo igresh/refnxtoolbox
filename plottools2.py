@@ -420,7 +420,7 @@ def CreateAxes(fig=None, sld_plot=True, refl_plot=True, vf_plot=False,
                             labelpad=0.1)
 
     if vf_plot:
-        vf_plot.set_ylabel('polymer volume fraction')
+        vf_plot.set_ylabel('volume fraction')
         vf_plot.set_xlabel(r'distance from substrate, $\mathrm{\AA}$',
                             labelpad=0.1)
 
