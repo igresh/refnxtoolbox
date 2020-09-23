@@ -208,19 +208,19 @@ class area_slabVF(Component):
                                        self.sld.imag.value,
                                        self.rough.value,
                                        self.vfsolv.value]))
-    
+
     @property
     def thick(self):
-        return self.adsorbed_amount.value/(1-self.vfsolv.value)
-        
+        return self.adsorbed_amount.value / (1 - self.vfsolv.value)
+
     def is_monotonic(self):
         return True
-    
-    
+
+
     def moment(self):
-        return self.thick/2
-    
-    
+        return self.thick / 2
+
+
     def profile(self, reverse=False):
         """
         returns the vfp for this    component.
@@ -228,12 +228,12 @@ class area_slabVF(Component):
         m = SLD(1.)
         s = Structure()
         s |= SLD(0)
-        
+
         slab = self.slabs()[0]
         thick = slab[0]
         rough = slab[3]
         vfsolv = slab[4]
-        
+
         layer = m(thick, rough)
         layer.vfsolv.value = vfsolv
         s |= layer
@@ -243,14 +243,14 @@ class area_slabVF(Component):
         if reverse:
             s.reverse_structure = True
 
-        zed = np.linspace(0, thick*1.1, thick*1.1 + 1)
-        
+        zed = np.linspace(0, thick * 1.1, thick * 1.1 + 1)
+
         zed[0] = 0.01
         z, s = s.sld_profile(z=zed)
-        
+
         return z, s
-    
-    
+
+
 class area_slabT(Component):
     """
     A slab component has uniform SLD over its thickness.
@@ -286,8 +286,8 @@ class area_slabT(Component):
         self.name = name
 
         p = Parameters(name=self.name)
-        p.extend([self.adsorbed_amount, self.thick, self.sld.real, self.sld.imag,
-                  self.rough ])
+        p.extend([self.adsorbed_amount, self.thick, self.sld.real,
+                  self.sld.imag, self.rough])
 
         self._parameters = p
 
@@ -299,10 +299,10 @@ class area_slabT(Component):
         """
         self._parameters.name = self.name
         return self._parameters
-    
+
     def is_monotonic(self):
         return True
-    
+
     def __repr__(self):
         # sld = repr(self.sld)
         #
