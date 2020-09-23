@@ -176,7 +176,7 @@ class area_slabVF(Component):
         if isinstance(dry_sld, SLD):
             self.sld = dry_sld
         else:
-            self.sld = SLD(dry_sld)
+            self.sld = SLD(dry_sld, name=name)
         self.rough = possibly_create_parameter(rough,
                                                name='%s - rough' % name)
         self.vfsolv = (
@@ -277,7 +277,7 @@ class area_slabT(Component):
         if isinstance(dry_sld, SLD):
             self.sld = dry_sld
         else:
-            self.sld = SLD(dry_sld)
+            self.sld = SLD(dry_sld, name=name)
         self.rough = possibly_create_parameter(rough,
                                                name='%s - rough' % name)
         self.thick = (
