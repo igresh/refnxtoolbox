@@ -17,7 +17,7 @@ def graph_plot(report=None, objective=None, sld_plot=True, refl_plot=True,
                vf_plot=False, fig=None, ax=None,
                logpost_limits='auto', ystyle='r', xstyle='lin', color=None,
                cbar=False, orientation='v', fig_kwargs=None, offset=1,
-               profile_offset=False):
+               profile_offset=False, flip_sld=False):
     """
     Process an objective, generating a report.
 
@@ -118,7 +118,7 @@ def graph_plot(report=None, objective=None, sld_plot=True, refl_plot=True,
             _report_graph_plot(rep, ax=ax,
                                logpost_limits=logpost_limits, ystyle=ystyle,
                                color=col, cbar=cbar, offset=reflOS,
-                               profile_offset=profileOS)
+                               profile_offset=profileOS, flip_sld=flip_sld)
             reflOS *= offset
             if profile_offset:
                 profileOS -= 1
@@ -127,14 +127,14 @@ def graph_plot(report=None, objective=None, sld_plot=True, refl_plot=True,
     else:
         _report_graph_plot(report, ax=ax,
                            logpost_limits=logpost_limits, ystyle=ystyle,
-                           color=color, cbar=cbar)
+                           color=color, cbar=cbar, flip_sld=flip_sld)
 
     return fig, ax
 
 
 def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
                        xstyle='lin', color=None, cbar=False, offset=1,
-                       profile_offset=0):
+                       profile_offset=0, flip_sld=False):
     """
     Plot a single report on a given set of axes.
 
@@ -172,6 +172,7 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
     vfps = report.model.vfp
     slds = report.model.sld
     refs = report.ref
+
     q, r, rerr = report.Qdat, report.Rdat, report.Rdat_err
     logposts = report.logpost
 
@@ -201,7 +202,7 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
     if axSLD:
         pOS = profile_offset * (np.max(slds[0][1]) - np.min(slds[0][1]))
         plot_profiles(slds, ax=axSLD, line_plotter=lp, cmap_keys=logposts,
-                      yoffset=pOS, label=name)
+                      yoffset=pOS, flip=flip_sld, label=name)
     if axR:
         plot_profiles(refs, ax=axR, line_plotter=lp, cmap_keys=logposts,
                       ymult=ymult * offset, label=name)
@@ -211,7 +212,7 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
 
 
 def plot_profiles(profiles, ax, line_plotter, cmap_keys, ymult=1, yoffset=0,
-                  label=None):
+                  label=None, flip=False):
     """
     Iterate through provided profiles and plot them using lineplotter.
 
@@ -233,9 +234,12 @@ def plot_profiles(profiles, ax, line_plotter, cmap_keys, ymult=1, yoffset=0,
 
     """
     for profile, cmap_key in zip(profiles, cmap_keys):
-        line_plotter.plot_line(ax,
-                               profile[0],
-                               profile[1] * ymult - yoffset,
+        x = profile[0]
+        if flip:
+            y = np.flip(profile[1])   
+        else:
+            y = profile[1] * ymult - yoffset
+        line_plotter.plot_line(ax, x, y,
                                cmap_key=cmap_key, label=label)
         label = None
 
