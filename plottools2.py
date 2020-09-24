@@ -73,7 +73,8 @@ def graph_plot(report=None, objective=None, sld_plot=True, refl_plot=True,
         does not offset curves.
     profile_offset : bool, optional
         Value to allow vertical offset of VFP and SLD profiles. Default False.
-
+    flip_sld : bool, optional
+        If true reverses the SLD profile. Default false.
 
     Returns
     -------
@@ -167,6 +168,8 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
         does not offset curves.
     profile_offset : float, optional
         Value to allow vertical offset of VFP and SLD profiles
+    flip_sld : bool, optional
+        If true reverses the SLD profile. Default false.
     """
     name = report.name
     vfps = report.model.vfp
@@ -231,7 +234,8 @@ def plot_profiles(profiles, ax, line_plotter, cmap_keys, ymult=1, yoffset=0,
     ymult : float, optional
         Vertical offset for the profile (y datapoints will be multiplied by
         this value). The default is 1.
-
+    flip : bool, optional
+        Whether to flip the profile along the x axis
     """
     for profile, cmap_key in zip(profiles, cmap_keys):
         x = profile[0]
