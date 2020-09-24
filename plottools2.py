@@ -195,6 +195,7 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
 
     alpha = np.max([1 / report.num_samples**0.6, 0.001])
     lp = lineplotter(color=color, alpha=alpha, cmap_bounds=logpost_limits)
+    rerr = clean_log_errors(r, rerr)
 
     axR.errorbar(q, r * offset * ymult, yerr=rerr * offset * ymult,
                  fmt='none', capsize=2, linewidth=1, color='k', alpha=0.7)
@@ -212,6 +213,31 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
 
     if cbar:
         lp.make_cbar(axR)
+
+
+def clean_log_errors(y, yerr):
+    """
+    Remove problemic error bars from plots that will be log-scaled.
+
+    Parameters
+    ----------
+    y : TYPE
+        DESCRIPTION.
+    yerr : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    yerr : TYPE
+        DESCRIPTION.
+
+    """
+    problem_mask = (y - yerr) <= 0
+    yerr[problem_mask] = y[problem_mask] * 0.9
+
+    if np.any(problem_mask):
+        warnings.warn('cleaned up errorbar where y - yerr < 0')
+    return yerr
 
 
 def plot_profiles(profiles, ax, line_plotter, cmap_keys, ymult=1, yoffset=0,
@@ -391,6 +417,9 @@ def CreateAxes(fig=None, sld_plot=True, refl_plot=True, vf_plot=False,
         assert refl_plot is not True, "Unsure what to do with bool and axis"
         assert vf_plot is not True, "Unsure what to do with bool and axis"
 
+    if fig:
+        AXS = fig.axes
+
     else:
         num_axes = sld_plot + refl_plot + vf_plot
         if fig_kwargs is None:
@@ -405,11 +434,12 @@ def CreateAxes(fig=None, sld_plot=True, refl_plot=True, vf_plot=False,
         else:
             raise ValueError('use "v" for vertical layout and "h" for \
                              horizontal layout.')
-        ax_idx = 0
-        for plt_idx, active_axis in enumerate(to_plot_ls):
-            if active_axis:
-                to_plot_ls[plt_idx] = AXS[ax_idx]
-                ax_idx += 1
+    ax_idx = 0
+    AXS = np.atleast_1d(AXS)
+    for plt_idx, active_axis in enumerate(to_plot_ls):
+        if active_axis:
+            to_plot_ls[plt_idx] = AXS[ax_idx]
+            ax_idx += 1
 
     [vf_plot, sld_plot, refl_plot] = to_plot_ls
 
@@ -437,11 +467,12 @@ def CreateAxes(fig=None, sld_plot=True, refl_plot=True, vf_plot=False,
         vf_plot.set_xlabel(r'distance from substrate, $\mathrm{\AA}$',
                            labelpad=0.1)
 
-    label = 'a'
-    for ax in [vf_plot, sld_plot, refl_plot]:
-        if ax:
-            ax.text(0.02, 0.98, s=f'{label})', ha='left', va='top',
-                    transform=ax.transAxes,
-                    path_effects=[pe.withStroke(linewidth=3, foreground="w")])
-            label = chr(ord(label) + 1)
+    if len(AXS) > 1:
+        label = 'a'
+        for ax in [vf_plot, sld_plot, refl_plot]:
+            if ax:
+                ax.text(0.02, 0.98, s=f'{label})', ha='left', va='top',
+                        transform=ax.transAxes,
+                        path_effects=[pe.withStroke(linewidth=3, foreground="w")])
+                label = chr(ord(label) + 1)
     return fig, to_plot_ls
