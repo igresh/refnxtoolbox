@@ -7,8 +7,42 @@ Created on Fri Jul 31 15:59:16 2020
 import warnings
 import refnx
 
-# TODO - a global objective report
 
+def process_globalobjective(gobjective, pvecs=None):
+    """
+    Create a list of reports from a global objective.
+
+    Parameters
+    ----------
+    gobjective : refnx.analysis.objective.GlobalObjective
+        a 'global' objective - that is one that combines multiple obejectives
+        so that they can be corefined.
+    pvecs : Parameters, list or np.array, optional
+        Contains parameter values. Is of shape [x, p] where x is the number of
+        samples and p is the number of parameters (either total number of
+        parameters or the number of varying parameters. The default is None.
+
+    Returns
+    -------
+    reports : list
+        List containing reports for each objective in gobjective.objectives.
+
+    """
+    if pvecs is None:
+        pvecs = [gobjective.parameters.flattened()]
+
+    reports = []
+    for obj in gobjective.objectives:
+        reports.append(objective_report(obj))
+
+    for pvec in pvecs:
+        gobjective.setp(pvec)
+
+        for obj, rep in zip(gobjective.objectives, reports):
+            rpvec = [obj.parameters.flattened()]
+            rep.process_objective(rpvec)
+
+    return reports
 
 class objective_report (object):
     """
