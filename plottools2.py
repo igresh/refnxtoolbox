@@ -17,7 +17,7 @@ def graph_plot(report=None, objective=None, sld_plot=True, refl_plot=True,
                vf_plot=False, fig=None, ax=None,
                logpost_limits='auto', ystyle='r', xstyle='lin', color=None,
                cbar=False, orientation='v', fig_kwargs=None, offset=1,
-               profile_offset=False, flip_sld=False):
+               profile_offset=False, flip_sld=False, lpkwrds={}):
     """
     Process an objective, generating a report.
 
@@ -119,7 +119,8 @@ def graph_plot(report=None, objective=None, sld_plot=True, refl_plot=True,
             _report_graph_plot(rep, ax=ax,
                                logpost_limits=logpost_limits, ystyle=ystyle,
                                color=col, cbar=cbar, offset=reflOS,
-                               profile_offset=profileOS, flip_sld=flip_sld)
+                               profile_offset=profileOS, flip_sld=flip_sld,
+                               lpkwrds=lpkwrds)
             reflOS *= offset
             if profile_offset:
                 profileOS -= 1
@@ -135,7 +136,7 @@ def graph_plot(report=None, objective=None, sld_plot=True, refl_plot=True,
 
 def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
                        xstyle='lin', color=None, cbar=False, offset=1,
-                       profile_offset=0, flip_sld=False):
+                       profile_offset=0, flip_sld=False, lpkwrds={}):
     """
     Plot a single report on a given set of axes.
 
@@ -194,7 +195,8 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
         assert len(list(logpost_limits)) == 2, 'bad format for logpost_limits'
 
     alpha = np.max([1 / report.num_samples**0.6, 0.001])
-    lp = lineplotter(color=color, alpha=alpha, cmap_bounds=logpost_limits)
+    lp = lineplotter(color=color, alpha=alpha, cmap_bounds=logpost_limits,
+                     **lpkwrds)
     rerr = clean_log_errors(r, rerr)
 
     axR.errorbar(q, r * offset * ymult, yerr=rerr * offset * ymult,
