@@ -197,10 +197,6 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
     alpha = np.max([1 / report.num_samples**0.6, 0.001])
     lp = lineplotter(color=color, alpha=alpha, cmap_bounds=logpost_limits,
                      **lpkwrds)
-    rerr = clean_log_errors(r, rerr)
-
-    axR.errorbar(q, r * offset * ymult, yerr=rerr * offset * ymult,
-                 fmt='none', capsize=2, linewidth=1, color='k', alpha=0.7)
 
     if axVF:
         plot_profiles(vfps, ax=axVF, line_plotter=lp, cmap_keys=logposts,
@@ -210,6 +206,9 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
         plot_profiles(slds, ax=axSLD, line_plotter=lp, cmap_keys=logposts,
                       yoffset=pOS, flip=flip_sld, label=name)
     if axR:
+        rerr = clean_log_errors(r, rerr)
+        axR.errorbar(q, r * offset * ymult, yerr=rerr * offset * ymult,
+                     fmt='none', capsize=2, linewidth=1, color='k', alpha=0.7)
         plot_profiles(refs, ax=axR, line_plotter=lp, cmap_keys=logposts,
                       ymult=ymult * offset, label=name)
 
