@@ -13,8 +13,8 @@ import matplotlib.patheffects as pe
 
 
 
-def graph_plot(report=None, objective=None, sld_plot=True, refl_plot=True,
-               vf_plot=False, fig=None, ax=None,
+def graph_plot(report=None, objective=None,
+               sld_plot=True, refl_plot=True, vf_plot=False,
                logpost_limits='auto', ystyle='r', xstyle='lin', color=None,
                cbar=False, orientation='v', fig_kwargs=None, offset=1,
                profile_offset=False, flip_sld=False, lpkwrds={}):
@@ -37,12 +37,6 @@ def graph_plot(report=None, objective=None, sld_plot=True, refl_plot=True,
     vf_plot : bool, optional
         If true will plot an SLD profile - note, there must be a element in the
         structure with a volume fraction component. The default is False.
-    fig : matplotlib figure
-        graph_plot will use supplied fig object if provided. If None will
-        generate its own fig and ax objects. The default is None.
-    ax : matplotlib axis
-        graph_plot will use supplied axis object if provided. If None will
-        generate its own fig and ax objects. The Default is None.
     logpost_limits : list)
         List containing lower and upper limits of the logpost for the system.
         If provided will set the colour of profiles based on their probability
@@ -83,7 +77,7 @@ def graph_plot(report=None, objective=None, sld_plot=True, refl_plot=True,
     ax : list
         list of created axes.
     """
-    fig, ax = CreateAxes(fig=fig, sld_plot=sld_plot, refl_plot=refl_plot,
+    fig, ax = CreateAxes(sld_plot=sld_plot, refl_plot=refl_plot,
                          vf_plot=vf_plot, ystyle=ystyle, xstyle=xstyle,
                          orientation=orientation, fig_kwargs=fig_kwargs)
 
@@ -214,6 +208,12 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
 
     if cbar:
         lp.make_cbar(axR)
+
+
+def fix_legend_alpha(ax):
+    x = ax.legend()
+    for h in x.legendHandles:
+        h.set_alpha(1)
 
 
 def clean_log_errors(y, yerr):
@@ -371,7 +371,7 @@ class lineplotter (object):
         ax.plot(x, y, **mkwargs)
 
 
-def CreateAxes(fig=None, sld_plot=True, refl_plot=True, vf_plot=False,
+def CreateAxes(sld_plot=True, refl_plot=True, vf_plot=False,
                orientation='h', ystyle='r', xstyle='lin',
                fig_kwargs=None):
     """
@@ -418,11 +418,16 @@ def CreateAxes(fig=None, sld_plot=True, refl_plot=True, vf_plot=False,
         assert refl_plot is not True, "Unsure what to do with bool and axis"
         assert vf_plot is not True, "Unsure what to do with bool and axis"
 
-    if fig:
-        AXS = fig.axes
+        AXS = []
+        for ax in to_plot_ls:
+            if ax is not False:
+                AXS.append(ax)
+
+        AXS = np.array(AXS)
+        fig = ax.get_figure()
 
     else:
-        num_axes = sld_plot + refl_plot + vf_plot
+        num_axes = vf_plot + sld_plot + refl_plot
         if fig_kwargs is None:
             fig_kwargs = {'figsize': (1 + 3 * num_axes, 3), 'dpi': 100,
                           'constrained_layout': True}
@@ -435,45 +440,53 @@ def CreateAxes(fig=None, sld_plot=True, refl_plot=True, vf_plot=False,
         else:
             raise ValueError('use "v" for vertical layout and "h" for \
                              horizontal layout.')
-    ax_idx = 0
-    AXS = np.atleast_1d(AXS)
-    for plt_idx, active_axis in enumerate(to_plot_ls):
-        if active_axis:
-            to_plot_ls[plt_idx] = AXS[ax_idx]
-            ax_idx += 1
 
-    [vf_plot, sld_plot, refl_plot] = to_plot_ls
+        if len(AXS) > 1:
+            ax_labeler(AXS)
+
+        ax_idx = 0
+        AXS = np.atleast_1d(AXS)
+        for plt_idx, active_axis in enumerate(to_plot_ls):
+            if active_axis:
+                to_plot_ls[plt_idx] = AXS[ax_idx]
+                ax_idx += 1
+
+        [vf_plot, sld_plot, refl_plot] = to_plot_ls
+
+        if refl_plot:
+            refl_plot.set_xlabel('$Q,\ \mathrm{\AA}^{-1}$', labelpad=0.1)
+            if ystyle == 'r':
+                refl_plot.set_ylabel('$R$')
+            elif ystyle == 'rq2':
+                refl_plot.set_ylabel('$RQ^2,\ \mathrm{\AA}^{-2}$')
+            elif ystyle == 'rq4':
+                refl_plot.set_ylabel('$RQ^4,\ \mathrm{\AA}^{-4}$')
+            else:
+                raise ValueError('use "r", "rq2" or "rq4".')
+
+        if sld_plot:
+            sld_plot.set_ylabel('SLD, $\\rm{\\AA}^{-2}$')
+            sld_plot.set_xlabel(r'distance from substrate, $\mathrm{\AA}$',
+                                labelpad=0.1)
+
+        if vf_plot:
+            vf_plot.set_ylabel('volume fraction')
+            vf_plot.set_xlabel(r'distance from substrate, $\mathrm{\AA}$',
+                               labelpad=0.1)
 
     if refl_plot:
         refl_plot.set_yscale('log')
         if xstyle == 'log':
             refl_plot.set_xscale('log')
-        refl_plot.set_xlabel('$Q,\ \mathrm{\AA}^{-1}$', labelpad=0.1)
-        if ystyle == 'r':
-            refl_plot.set_ylabel('$R$')
-        elif ystyle == 'rq2':
-            refl_plot.set_ylabel('$RQ^2,\ \mathrm{\AA}^{-2}$')
-        elif ystyle == 'rq4':
-            refl_plot.set_ylabel('$RQ^4,\ \mathrm{\AA}^{-4}$')
-        else:
-            raise ValueError('use "r", "rq2" or "rq4".')
 
-    if sld_plot:
-        sld_plot.set_ylabel('SLD, $\\rm{\\AA}^{-2}$')
-        sld_plot.set_xlabel(r'distance from substrate, $\mathrm{\AA}$',
-                            labelpad=0.1)
-
-    if vf_plot:
-        vf_plot.set_ylabel('volume fraction')
-        vf_plot.set_xlabel(r'distance from substrate, $\mathrm{\AA}$',
-                           labelpad=0.1)
-
-    if len(AXS) > 1:
-        label = 'a'
-        for ax in [vf_plot, sld_plot, refl_plot]:
-            if ax:
-                ax.text(0.02, 0.98, s=f'{label})', ha='left', va='top',
-                        transform=ax.transAxes,
-                        path_effects=[pe.withStroke(linewidth=3, foreground="w")])
-                label = chr(ord(label) + 1)
     return fig, to_plot_ls
+
+
+def ax_labeler(axs, start_label='a'):
+    axs = np.ravel(axs)
+    label = start_label
+    for ax in axs:
+        ax.text(0.02, 0.98, s=f'{label})', ha='left', va='top',
+                transform=ax.transAxes,
+                path_effects=[pe.withStroke(linewidth=3, foreground="w")])
+        label = chr(ord(label) + 1)
