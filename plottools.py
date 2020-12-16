@@ -5,7 +5,7 @@ Created on Fri Jul 31 15:59:16 2020
 @author: Isaac
 """
 import warnings
-import objective_processing2
+import objective_processing
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as clrs
