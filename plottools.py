@@ -85,11 +85,11 @@ def graph_plot(report=None, objective=None,
         if type(objective) == list:
             report = []
             for obj in objective:
-                rep = objective_processing2.objective_report(obj)
+                rep = objective_processing.objective_report(obj)
                 rep.process_objective()
                 report.append(rep)
         else:
-            report = objective_processing2.objective_report(objective)
+            report = objective_processing.objective_report(objective)
             report.process_objective()
     elif not report:
         warnings.warn('No reports or objectives given')
