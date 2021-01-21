@@ -482,11 +482,11 @@ def CreateAxes(sld_plot=True, refl_plot=True, vf_plot=False,
     return fig, to_plot_ls
 
 
-def ax_labeler(axs, start_label='a'):
+def ax_labeler(axs, start_label='a', labelpos=(0.02, 0.98)):
     axs = np.ravel(axs)
     label = start_label
     for ax in axs:
-        ax.text(0.02, 0.98, s=f'{label})', ha='left', va='top',
+        ax.text(*labelpos, s=f'{label})', ha='left', va='top',
                 transform=ax.transAxes,
                 path_effects=[pe.withStroke(linewidth=3, foreground="w")])
         label = chr(ord(label) + 1)
