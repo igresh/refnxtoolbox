@@ -190,7 +190,6 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
         assert len(list(logpost_limits)) == 2, 'bad format for logpost_limits'
 
     alpha = np.max([1 / report.num_samples**0.6, 0.001])
-    print (lpkwrds)
     lp = lineplotter(color=color, alpha=alpha, cmap_bounds=logpost_limits,
                      **lpkwrds)
 
