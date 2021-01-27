@@ -424,7 +424,7 @@ def CreateAxes(sld_plot=True, refl_plot=True, vf_plot=False,
                 AXS.append(ax)
 
         AXS = np.array(AXS)
-        fig = ax.get_figure()
+        fig = AXS[0].get_figure()
 
     else:
         num_axes = vf_plot + sld_plot + refl_plot
