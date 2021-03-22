@@ -179,9 +179,9 @@ def plot_distmodel(objective, refl_mode='rq4', maxd=1000):
     ax2.text(0.95, 0.17, 'background: %d' % objective.model.bkg.value,
              ha='right', va=txt_loc2, size='small',
              transform=ax2.transAxes)
-    ax2.text(0.95, 0.05, 'lnprob: %d' % (objective.logpost()),
-             ha='right', va=txt_loc2, size='small',
-             transform=ax2.transAxes)
+#    ax2.text(0.95, 0.05, 'lnprob: %d' % (objective.logpost()),
+#             ha='right', va=txt_loc2, size='small',
+#             transform=ax2.transAxes)
     ax2.text(0.95, 0.11, 'chisqr: %d' % (objective.chisqr()),
              ha='right', va=txt_loc2, size='small',
              transform=ax2.transAxes)
@@ -190,7 +190,7 @@ def plot_distmodel(objective, refl_mode='rq4', maxd=1000):
     fig.tight_layout()
 
 
-def make_objective(name, data, unconfined_objective, pset, bset=None,
+def make_objective(name, data, pset, unconfined_objective=None, bset=None,
                    num_points=101, withtail=True):
     """
     Make an objective featuring a distribution model, in style of Gresham 2020.
@@ -225,14 +225,13 @@ def make_objective(name, data, unconfined_objective, pset, bset=None,
     """
     h2o     = SLD(-0.54, 'h2o')
     melCM   = SLD(2.60,   'Melinex CM soln')
-    melinex = SLD(2.55,   'Melinex') 
+    melinex = SLD(2.56,   'Melinex') 
     sio2    = SLD(3.47,   'sio2')
     si      = SLD(2.07,  'si')
     polymer = SLD(0.85,  'PNIPAM')
 
     # Make sure nothing in our (already fitted) unconfined objective varys.
-    for vp in unconfined_objective.varying_parameters().flattened():
-        vp.setp(vary=False)
+
 
     si_l          = si(0, 0)
 
@@ -246,17 +245,24 @@ def make_objective(name, data, unconfined_objective, pset, bset=None,
     mellinex_l = melinex(0,14)
     mellinex_l.rough.setp                (vary=False, bounds=(1, 20))
 
-    h2o_l = h2o(0,500)
+    h2o_l = h2o(0,10)
 
     structure_mel = si_l | sio2_l | polymer_l_mel | mellinex_l
-    structure_h2o = si_l | sio2_l | unconfined_objective.model.structure[2] | unconfined_objective.model.structure[3] | h2o_l
 
-    unconfined_objective.model.structure[3].adsorbed_amount = polymer_l_mel.adsorbed_amount
+    if unconfined_objective is not None:
+        for vp in unconfined_objective.varying_parameters().flattened():
+            vp.setp(vary=False)
+        unconfined_objective.model.structure[3].adsorbed_amount = polymer_l_mel.adsorbed_amount
+        structure_h2o = si_l | sio2_l | unconfined_objective.model.structure[2] | unconfined_objective.model.structure[3] | h2o_l
+    else:
+        structure_h2o = si_l | h2o_l
+
 
     structure_mel.solvent = h2o
     structure_h2o.solvent = h2o
 
-    structure_h2o.contract = 1.5
+    if unconfined_objective is not None:
+        structure_h2o.contract = 1.5
 
     distmodel = DistributionModel(structure_mel, loc_in_struct=2,
                                   num_structs=num_points, pdf=dist_pdf,
@@ -280,10 +286,9 @@ def make_objective(name, data, unconfined_objective, pset, bset=None,
     model = MetaModel([distmodel, h2omodel], [0.5, 0.5], add_params=[sratio])
     model.scales[0].setp(value=0.97)
     model.scales[1] = model.scales[0]*sratio
-    model.bkg.setp(value=5e-6)
+    model.bkg.setp(value=0)
 
     obj = Objective(model, data, name=name)
-
     for key in pset:
         set_param(obj.parameters, key, value=pset[key])
 
