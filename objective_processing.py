@@ -146,12 +146,20 @@ class model_report (object):
         assert type(model) is refnx.reflect.reflect_model.ReflectModel
         self.scale.append(model.scale.value)
         self.bkg.append(model.bkg.value)
+
+        # Might regret putting this in later - but unflip the SLD profile
+        # by default
+        reverse_state = model.structure.reverse_structure
+        model.structure.reverse_structure = False
+        model.structure.sld_profile()
         self.sld.append(model.structure.sld_profile())
 
         if self.freeform_location:
             z, phi, kz, kphi = model.structure[self.freeform_location].profile(True)
             self.vfp.append([z, phi])
             self.knots.append([kz, kphi])
+
+        model.structure.reverse_structure = reverse_state
 
     def find_freeform_location(self):
         """
