@@ -10,6 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as clrs
 import matplotlib.patheffects as pe
+from refnx.analysis import Objective, Parameter, Parameters, GlobalObjective
+import pandas as pd
 
 
 
@@ -268,7 +270,7 @@ def plot_profiles(profiles, ax, line_plotter, cmap_keys, ymult=1, yoffset=0,
     for profile, cmap_key in zip(profiles, cmap_keys):
         x = profile[0]
         if flip:
-            y = np.flip(profile[1])   
+            y = np.flip(profile[1])
         else:
             y = profile[1] * ymult - yoffset
         line_plotter.plot_line(ax, x, y,
@@ -491,3 +493,58 @@ def ax_labeler(axs, start_label='a', labelpos=(0.02, 0.98)):
                 transform=ax.transAxes,
                 path_effects=[pe.withStroke(linewidth=3, foreground="w")])
         label = chr(ord(label) + 1)
+
+
+def save_parameters(name, params=None, objective=None):
+    """
+    Saves out all the parameters from either an Objective, GlobalObjective or
+    Parameters object as a CSV file.
+
+    If the objective is named, it includes this information in the table.
+
+    Its a bit stuffed for dependencies in global objectives, for reasons
+    I'm not quite sure of (something to do with inter-object linking)
+
+    """
+    assert params is not None or objective is not None, "Must supply either params or objective"
+
+    predf_list = process_parameters(params=params, objective=objective)
+
+    col_names = ['variable name', 'value', 'is varying', 'Std Error', 'lower bound', 'upper bound', 'dependencies']
+
+    padded_col_names = ['']*(len(predf_list[0])-len(col_names)) + col_names
+
+    df = pd.DataFrame(data=predf_list, columns=padded_col_names)
+
+    df.to_csv(name, index=False)
+
+
+
+def process_parameters(params=None, objective=None, line_addon=[]):
+    predf_list = []
+
+    if params:
+        assert objective is None, "Must supply EITHER objective or params"
+
+
+        for param in params:
+            dep_names = ''
+            for p in param.dependencies():
+                dep_names += p.name
+                dep_names += ', '
+
+            if param.vary == True:
+                predf_list.append(line_addon + [param.name, param.value, 'True', param.stderr, param.bounds.lb, param.bounds.ub, dep_names])
+            else:
+                predf_list.append(line_addon + [param.name, param.value, 'False', '', '', '', dep_names])
+
+    if objective:
+        assert params is None, "Must supply EITHER objective or params"
+
+        if type(objective) is GlobalObjective:
+            for obj in objective.objectives:
+                predf_list = predf_list + process_parameters(objective=obj)
+        else:
+            predf_list = process_parameters(params=objective.parameters.flattened(), line_addon=line_addon + [objective.name])
+
+    return predf_list
