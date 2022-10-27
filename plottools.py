@@ -12,7 +12,8 @@ import matplotlib.colors as clrs
 import matplotlib.patheffects as pe
 from refnx.analysis import Objective, Parameter, Parameters, GlobalObjective
 import pandas as pd
-
+import copy
+from refnx.reflect import SLD
 
 
 def graph_plot(report=None, objective=None,
@@ -548,3 +549,25 @@ def process_parameters(params=None, objective=None, line_addon=[]):
             predf_list = process_parameters(params=objective.parameters.flattened(), line_addon=line_addon + [objective.name])
 
     return predf_list
+
+
+def force_vfp(structure, vfp_index, z_offset=0):
+
+    if type(vfp_index) is not list:
+        vfp_index = [vfp_index]
+
+    struc = copy.deepcopy(structure)
+    struc.solvent = SLD(0)
+
+    for idx, item in enumerate (struc):
+        if idx in vfp_index:
+            try:
+                item.sld.real.value = 1
+            except AttributeError:
+                item.polymer_sld.real.value = 1
+        else:
+            item.sld.real.value = 0
+
+    z, phi = struc.sld_profile()
+    z = z + z_offset
+    return z, phi
