@@ -14,7 +14,8 @@ from refnx.analysis import Objective, Parameter, Parameters, GlobalObjective
 import pandas as pd
 import copy
 from refnx.reflect import SLD
-
+from refnx._lib import flatten
+import corner
 
 def graph_plot(report=None, objective=None,
                sld_plot=True, refl_plot=True, vf_plot=False,
@@ -571,3 +572,15 @@ def force_vfp(structure, vfp_index, z_offset=0):
     z, phi = struc.sld_profile()
     z = z + z_offset
     return z, phi
+    
+    
+def plot_corner(objective, samples):
+    labels = []
+
+    for i in flatten(objective.parameters.varying_parameters()):
+        labels.append(i.name)
+
+    fig = corner.corner(samples, labels=labels, quantiles=[0.025, 0.5, 0.975],
+                        show_titles=True, title_kwargs={"fontsize": 12})
+
+    return fig
