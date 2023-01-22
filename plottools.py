@@ -215,8 +215,11 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
         lp.make_cbar(axR)
 
 
-def fix_legend_alpha(ax):
-    x = ax.legend()
+def fix_legend_alpha(ax, create_legend=False):
+    if create_legend:
+        x = ax.legend()
+    else:
+        x = ax.get_legend()
     for h in x.legendHandles:
         h.set_alpha(1)
 
@@ -572,8 +575,8 @@ def force_vfp(structure, vfp_index, z_offset=0):
     z, phi = struc.sld_profile()
     z = z + z_offset
     return z, phi
-    
-    
+
+
 def plot_corner(objective, samples):
     labels = []
 
