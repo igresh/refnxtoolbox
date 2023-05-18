@@ -21,7 +21,8 @@ def graph_plot(report=None, objective=None,
                sld_plot=True, refl_plot=True, vf_plot=False,
                logpost_limits='auto', ystyle='r', xstyle='lin', color=None,
                cbar=False, orientation='v', fig_kwargs=None, offset=1,
-               profile_offset=False, flip_sld=False, lpkwrds={}):
+               profile_offset=False, SLD_shift=0, 
+               flip_sld=False, lpkwrds={}):
     """
     Process an objective, generating a report.
 
@@ -71,6 +72,9 @@ def graph_plot(report=None, objective=None,
         does not offset curves.
     profile_offset : bool, optional
         Value to allow vertical offset of VFP and SLD profiles. Default False.
+    SLD_shift : float, optional
+        Distance in angstroms to shift SLD profiles (left or right).
+        The default is 0.
     flip_sld : bool, optional
         If true reverses the SLD profile. Default false.
 
@@ -118,7 +122,7 @@ def graph_plot(report=None, objective=None,
                                logpost_limits=logpost_limits, ystyle=ystyle,
                                color=col, cbar=cbar, offset=reflOS,
                                profile_offset=profileOS, flip_sld=flip_sld,
-                               lpkwrds=lpkwrds)
+                               SLD_shift=SLD_shift, lpkwrds=lpkwrds)
             reflOS *= offset
             if profile_offset:
                 profileOS -= 1
@@ -128,14 +132,15 @@ def graph_plot(report=None, objective=None,
         _report_graph_plot(report, ax=ax,
                            logpost_limits=logpost_limits, ystyle=ystyle,
                            color=color, cbar=cbar, flip_sld=flip_sld,
-                           lpkwrds=lpkwrds)
+                           SLD_shift=SLD_shift, lpkwrds=lpkwrds)
 
     return fig, ax
 
 
 def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
                        xstyle='lin', color=None, cbar=False, offset=1,
-                       profile_offset=0, flip_sld=False, lpkwrds={}):
+                       profile_offset=0, SLD_shift=0, 
+                       flip_sld=False, lpkwrds={}):
     """
     Plot a single report on a given set of axes.
 
@@ -203,7 +208,8 @@ def _report_graph_plot(report, ax, logpost_limits='auto', ystyle='r',
     if axSLD:
         pOS = profile_offset * (np.max(slds[0][1]) - np.min(slds[0][1]))
         plot_profiles(slds, ax=axSLD, line_plotter=lp, cmap_keys=logposts,
-                      yoffset=pOS, flip=flip_sld, label=name)
+                      yoffset=pOS, xoffset=SLD_shift, 
+                      flip=flip_sld, label=name)
     if axR:
         rerr = clean_log_errors(r, rerr)
         axR.errorbar(q, r * offset * ymult, yerr=rerr * offset * ymult,
@@ -250,7 +256,7 @@ def clean_log_errors(y, yerr):
 
 
 def plot_profiles(profiles, ax, line_plotter, cmap_keys, ymult=1, yoffset=0,
-                  label=None, flip=False):
+                  xoffset=0,label=None, flip=False):
     """
     Iterate through provided profiles and plot them using lineplotter.
 
@@ -273,7 +279,7 @@ def plot_profiles(profiles, ax, line_plotter, cmap_keys, ymult=1, yoffset=0,
         Whether to flip the profile along the x axis
     """
     for profile, cmap_key in zip(profiles, cmap_keys):
-        x = profile[0]
+        x = profile[0]-xoffset
         if flip:
             y = np.flip(profile[1])
         else:
@@ -555,7 +561,7 @@ def process_parameters(params=None, objective=None, line_addon=[]):
     return predf_list
 
 
-def force_vfp(structure, vfp_index, z_offset=0):
+def force_vfp(structure, vfp_index, z_offset=0, backside_roughness=True):
 
     if type(vfp_index) is not list:
         vfp_index = [vfp_index]
@@ -571,6 +577,10 @@ def force_vfp(structure, vfp_index, z_offset=0):
                 item.polymer_sld.real.value = 1
         else:
             item.sld.real.value = 0
+
+
+    if not backside_roughness:
+        struc = struc[min(vfp_index):]
 
     z, phi = struc.sld_profile()
     z = z + z_offset
