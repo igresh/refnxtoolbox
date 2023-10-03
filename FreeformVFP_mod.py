@@ -15,6 +15,7 @@ EPS = np.finfo(float).eps
 class FreeformVFP_ext(Component):
     def __init__(self, extent, vf, dzf, polymer_sld, name='',
                  left_slabs=(), right_slabs=(),
+                 adsorbed_amount=None,
                  interpolator=Pchip, zgrad=True,
                  microslab_max_thickness=1):
         """
@@ -83,6 +84,16 @@ class FreeformVFP_ext(Component):
         self.extent = (
             possibly_create_parameter(extent,
                                       name='%s - extent' % name))
+
+        if adsorbed_amount is not None:
+            self.fix_ads_amt = True
+        else:
+            self.fix_ads_amt = False
+            adsorbed_amount = -1
+
+        self.adsorbed_amount = (
+        possibly_create_parameter(adsorbed_amount,
+                                      name='%s - adsorbed_amount' % name))
 
         # dzf are the spatial gaps between the spline knots
         self.dzf = Parameters(name='dzf - spline')
@@ -233,7 +244,18 @@ class FreeformVFP_ext(Component):
             Volume fraction
         """
         interpolator = self._vfp_interpolator()
-        vfp = interpolator(z / float(self._extent()))
+
+        if self.fix_ads_amt == True:
+            unmod_adsamt = float(self._extent())*interpolator.integrate(0, 1)
+            modifier = self.adsorbed_amount.value/unmod_adsamt
+        else:
+            modifier = 1
+
+        vfp = modifier*interpolator(z / float(self._extent()))
+
+
+
+
         return vfp
 
     def moment(self, moment=1):
@@ -263,7 +285,7 @@ class FreeformVFP_ext(Component):
     def parameters(self):
         p = Parameters(name=self.name)
         p.extend([self.extent, self.dzf, self.vf,
-                  self.polymer_sld.parameters])
+                  self.polymer_sld.parameters, self.adsorbed_amount])
         p.extend([slab.parameters for slab in self.left_slabs])
         p.extend([slab.parameters for slab in self.right_slabs])
         return p
