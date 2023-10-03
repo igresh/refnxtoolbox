@@ -87,6 +87,11 @@ class FreeformVFP(Component):
             possibly_create_parameter(adsorbed_amount,
                                       name='%s - adsorbed amount' % name))
 
+        # NEW : need a non-varying parameter that can be used for binaryops
+        #       for corefining
+        self.extent = (possibly_create_parameter(adsorbed_amount,
+                                      name='%s - extent' % name))
+
         # dzf are the spatial gaps between the spline knots
         self.dzf = Parameters(name='dzf - spline')
         for i, z in enumerate(dzf):
@@ -156,6 +161,9 @@ class FreeformVFP(Component):
 
         interpolator = self._vfp_interpolator()
         extent = difference / interpolator.integrate(0, 1)
+
+        # Update proxy-parameter
+        self.extent.value = extent
 
         return extent
 
